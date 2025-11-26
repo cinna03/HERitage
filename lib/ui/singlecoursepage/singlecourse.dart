@@ -96,7 +96,7 @@ class _SingleCoursePageState extends State<SingleCoursePage> {
                   width: double.infinity,
                   decoration: BoxDecoration(
                     borderRadius: const BorderRadius.all(Radius.circular(10)),
-                    color: Colors.blue[600],
+                    color: Colors.pink[600],
                   ),
                 ),
                 SizedBox(height: 15),
@@ -127,7 +127,7 @@ class _SingleCoursePageState extends State<SingleCoursePage> {
                                   decoration: BoxDecoration(
                                     borderRadius: const BorderRadius.all(
                                         Radius.circular(8)),
-                                    color: Colors.blue[600],
+                                    color: Colors.pink[600],
                                   ),
                                 ),
                                 SizedBox(

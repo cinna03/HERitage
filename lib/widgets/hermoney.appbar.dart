@@ -42,7 +42,7 @@ class CourseHubAppBar extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.all(5.0),
                   child: Image.asset(
-                    'assets/images/Coursehub logo.png',
+                    'assets/images/Hermoneylogo.png',
                   ),
                 ),
                 RichText(
@@ -52,8 +52,8 @@ class CourseHubAppBar extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                     children: <TextSpan>[
-                      TextSpan(text: 'Course', style: courseStyle),
-                      TextSpan(text: 'hub', style: hubStyle),
+                      TextSpan(text: 'Her', style: courseStyle),
+                      TextSpan(text: 'Money', style: hubStyle),
                     ],
                   ),
                 ),

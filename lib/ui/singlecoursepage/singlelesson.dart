@@ -31,13 +31,13 @@ class _SingleLessonPageState extends State<SingleLessonPage> {
                             children: <Widget>[
                               Icon(
                                 Icons.arrow_back,
-                                color: mainBlue,
+                                color: Colors.pink,
                               ),
                               SizedBox(width: 15),
                               Text(
                                 'Introduction to Ethical Hacking',
                                 style: TextStyle(
-                                  color: mainBlue,
+                                  color: Colors.pink,
                                   fontSize: 17,
                                 ),
                               ),

@@ -1,8 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 
 class ExplorePage extends StatefulWidget {
 ExplorePage({Key? key, required this.title}) : super(key: key);
@@ -104,15 +102,15 @@ class _ExplorePageState extends State<ExplorePage> with TickerProviderStateMixin
                   textAlign: TextAlign.center,
                   text: TextSpan(
                       children: [
-                        TextSpan(text : 'Course', style: TextStyle(
+                        TextSpan(text : 'Her', style: TextStyle(
                             fontWeight: FontWeight.w600,
                             color: Colors.black,
                             fontSize: 25
                         )),
-                        TextSpan(text: 'hub',
+                        TextSpan(text: 'Money',
                             style: TextStyle(
                                 fontSize: 25,
-                                color: Colors.blue,
+                                color: const Color.fromARGB(255, 243, 33, 180),
                                 fontWeight: FontWeight.w600
                             )
                         )
@@ -122,7 +120,7 @@ class _ExplorePageState extends State<ExplorePage> with TickerProviderStateMixin
                 padding: EdgeInsets.only(left: 10, top: 10),
                 child: Container(
 
-                  child: Image.asset('assets/images/Coursehub logo.png'),),
+                  child: Image.asset('assets/images/hermoneylogo.png'),),
               ),
               backgroundColor: Colors.white,
 
@@ -220,7 +218,7 @@ class _ExplorePageState extends State<ExplorePage> with TickerProviderStateMixin
                   backgroundColor: Colors.white,
                   pinned: true,
                   floating: true,
-                  leading: Icon(Icons.list, color: Colors.blue,),
+                  leading: Icon(Icons.list, color: const Color.fromARGB(255, 243, 33, 198),),
                   actions: [
                     Padding(
                       padding: EdgeInsets.all(15),
@@ -230,8 +228,8 @@ class _ExplorePageState extends State<ExplorePage> with TickerProviderStateMixin
                             borderRadius: BorderRadius.circular(20),
                             gradient: LinearGradient(
                                 colors: [
-                                  Colors.blueAccent,
-                                  Colors.purple
+                                  const Color.fromARGB(255, 255, 68, 246),
+                                  const Color.fromARGB(255, 231, 0, 0)
                                 ]
                             )
                         ),
@@ -252,7 +250,7 @@ class _ExplorePageState extends State<ExplorePage> with TickerProviderStateMixin
                       child: TextField(
                         decoration: InputDecoration(
                           border:null ,
-                          focusColor: Colors.blueAccent,
+                          focusColor: const Color.fromARGB(255, 249, 68, 255),
                           hintText: 'Search Courses',
                           hintStyle: TextStyle(
                               color: Colors.grey,
@@ -286,7 +284,7 @@ class _ExplorePageState extends State<ExplorePage> with TickerProviderStateMixin
                       child: Text(
                         'Top Developers'.toUpperCase(),
                         style: TextStyle(
-                          color: Colors.blue,
+                          color: const Color.fromARGB(255, 243, 33, 215),
                           fontSize: 25,
                           fontWeight: FontWeight.w900
                         ),
@@ -320,8 +318,8 @@ class _ExplorePageState extends State<ExplorePage> with TickerProviderStateMixin
                                   end: Alignment.bottomCenter,
 
                                   colors: [
-                                    Colors.cyan.withOpacity(.1),
-                                    Colors.lightBlue.withOpacity(.6),
+                                    const Color.fromARGB(255, 212, 0, 141).withOpacity(.1),
+                                    const Color.fromARGB(255, 244, 3, 212).withOpacity(.6),
 
                                   ],
                                   stops: [
@@ -362,7 +360,7 @@ class _ExplorePageState extends State<ExplorePage> with TickerProviderStateMixin
                         child: Text('Top Courses'.toUpperCase(), style: TextStyle(
                           fontWeight: FontWeight.w900,
                           fontSize: 25,
-                          color: Colors.blue
+                          color: const Color.fromARGB(255, 243, 33, 198)
                         ),),
                       );
                     }
@@ -377,8 +375,8 @@ class _ExplorePageState extends State<ExplorePage> with TickerProviderStateMixin
                                 Colors.pinkAccent,
                                 Colors.pinkAccent.withOpacity(.4)
                               ] : [
-                                Colors.lightBlue,
-                                Colors.cyan
+                                Colors.pinkAccent,
+                                Colors.pink
                               ]
                             ),
                           borderRadius: BorderRadius.circular(20)
@@ -419,11 +417,11 @@ class _ExplorePageState extends State<ExplorePage> with TickerProviderStateMixin
                                   Chip(
                                     backgroundColor: Colors.white,
                                     avatar: CircleAvatar(
-                                      backgroundColor: index%2==0?Colors.pinkAccent:Colors.lightBlue,
+                                      backgroundColor: index%2==0?Colors.pinkAccent:Colors.pink,
                                       child: Icon(index%2==0?Icons.lock_open: Icons.lock, size: 20, color: Colors.white,),
                                     ),
                                     label: Text(index%2==0?'Public' : 'Private', style: TextStyle(
-                                      color: index%2==0?Colors.pinkAccent:Colors.blue
+                                      color: index%2==0?Colors.pinkAccent:Colors.pink
                                     ),),
                                   )
                                 ],
@@ -440,7 +438,7 @@ class _ExplorePageState extends State<ExplorePage> with TickerProviderStateMixin
                                 children: [
                                   CircleAvatar(
                                     backgroundColor: Colors.white,
-                                    backgroundImage: NetworkImage('https://pbs.twimg.com/profile_images/1271971746506252290/E8bs2lts_400x400.jpg'),
+                                    backgroundImage: NetworkImage('assets/images/profile.jpg'),
                                   ),
                                   Text('TanyaTheCoder', style: TextStyle(
                                     color: Colors.white,

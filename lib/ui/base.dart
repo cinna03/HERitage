@@ -35,7 +35,7 @@ class _BaseState extends State<Base> {
       onTap: _onTap,
       currentIndex: _current,
       type: BottomNavigationBarType.fixed,
-      selectedItemColor: Color(0xff4769FF),
+      selectedItemColor: Color.fromARGB(255, 255, 71, 200),
       unselectedItemColor: Color(0xffE9E9EA),
       selectedLabelStyle: TextStyle(fontWeight: FontWeight.bold),
       unselectedLabelStyle: TextStyle(fontWeight: FontWeight.normal),

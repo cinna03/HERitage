@@ -4,7 +4,7 @@ import 'account/account.newaccount.dart';
 import 'base.dart';
 
 final List<String> imgList = [
-  'assets/images/Coursehub logo.png',
+  'assets/images/Hermoneylogo.png',
   'assets/images/home slider2.png',
   'assets/images/home slider3.png',
 ];
@@ -145,7 +145,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Text(
                 'SIGN UP',
                 style: TextStyle(
-                  color: const Color.fromARGB(255, 241, 5, 151),
+                  color: const Color.fromARGB(255, 255, 255, 255),
                   fontFamily: 'Lato',
                   fontWeight: FontWeight.bold,
                 ),
