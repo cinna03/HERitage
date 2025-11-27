@@ -1,59 +1,35 @@
-// ignore: unused_import
-import 'package:device_preview/device_preview.dart';
-import 'package:firebase_core/firebase_core.dart';
-// ignore: unused_import
-import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
-
-import 'package:coursehub/ui/index.dart';
 import 'package:coursehub/utils/index.dart';
+import 'package:coursehub/utils/theme_provider.dart';
+import 'package:coursehub/ui/splash_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(MyApp());
+  runApp(HermonyApp());
 }
 
-class MyApp extends StatefulWidget {
+class HermonyApp extends StatefulWidget {
   @override
-  _MyAppState createState() => _MyAppState();
+  _HermonyAppState createState() => _HermonyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
-  // Set default `_initialized` and `_error` state to false
-  // ignore: unused_field
-  bool _initialized = false;
-  // ignore: unused_field
-  bool _error = false;
-
-  // Define an async function to initialize FlutterFire
-  void initializeFlutterFire() async {
-    try {
-      // Wait for Firebase to initialize and set `_initialized` state to true
-      await Firebase.initializeApp();
-      setState(() {
-        _initialized = true;
-      });
-    } catch (e) {
-      // Set `_error` state to true if Firebase initialization fails
-      setState(() {
-        _error = true;
-      });
-    }
-  }
-
-  @override
-  void initState() {
-    initializeFlutterFire();
-    super.initState();
-  }
+class _HermonyAppState extends State<HermonyApp> {
+  final ThemeProvider _themeProvider = ThemeProvider();
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'CourseHub',
-      theme: mainTheme,
-      home: OnboardingScreen(),
+    return AnimatedBuilder(
+      animation: _themeProvider,
+      builder: (context, child) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Hermony - Empowering African Women in Arts',
+          theme: lightTheme,
+          darkTheme: darkTheme,
+          themeMode: _themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+          home: SplashScreen(themeProvider: _themeProvider),
+        );
+      },
     );
   }
 }
