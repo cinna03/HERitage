@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:coursehub/utils/index.dart';
 import 'package:coursehub/utils/theme_provider.dart';
 import 'auth/signup_screen.dart';
 import 'auth/login_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
-  final ThemeProvider themeProvider;
-  
-  WelcomeScreen({required this.themeProvider});
-  
   @override
   _WelcomeScreenState createState() => _WelcomeScreenState();
 }
@@ -102,13 +99,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             top: 50,
             right: 20,
             child: SafeArea(
-              child: IconButton(
-                onPressed: widget.themeProvider.toggleTheme,
-                icon: Icon(
-                  widget.themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
-                  color: primaryPink,
-                  size: 28,
-                ),
+              child: Consumer<ThemeProvider>(
+                builder: (context, themeProvider, child) {
+                  return IconButton(
+                    onPressed: themeProvider.toggleTheme,
+                    icon: Icon(
+                      themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                      color: primaryPink,
+                      size: 28,
+                    ),
+                  );
+                },
               ),
             ),
           ),

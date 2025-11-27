@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:coursehub/utils/index.dart';
 import '../onboarding/interest_selection_screen.dart';
+import '../../services/mock_auth_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   @override
@@ -14,6 +15,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  final MockAuthService _authService = MockAuthService();
+
+  void _signUp() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        await _authService.signUpWithEmail(_emailController.text, _passwordController.text);
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => InterestSelectionScreen()),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sign up failed: ${e.toString()}')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +69,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 SizedBox(height: 40),
                 TextFormField(
                   controller: _emailController,
+                  onFieldSubmitted: (_) => _signUp(),
                   decoration: InputDecoration(
                     labelText: 'Email',
                     prefixIcon: Icon(Icons.email, color: primaryPink),
@@ -65,6 +84,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
+                  onFieldSubmitted: (_) => _signUp(),
                   decoration: InputDecoration(
                     labelText: 'Password',
                     prefixIcon: Icon(Icons.lock, color: primaryPink),
@@ -90,6 +110,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: _obscureConfirmPassword,
+                  onFieldSubmitted: (_) => _signUp(),
                   decoration: InputDecoration(
                     labelText: 'Confirm Password',
                     prefixIcon: Icon(Icons.lock, color: primaryPink),
@@ -115,14 +136,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 Container(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => InterestSelectionScreen()),
-                        );
-                      }
-                    },
+                    onPressed: _signUp,
                     child: Text('Sign Up', style: TextStyle(fontSize: 16)),
                     style: ElevatedButton.styleFrom(
                       padding: EdgeInsets.symmetric(vertical: 15),

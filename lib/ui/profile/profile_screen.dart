@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:coursehub/utils/index.dart';
+import '../auth/login_screen.dart';
+import '../settings/settings_screen.dart';
+import '../../services/mock_auth_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -511,11 +514,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             SizedBox(height: 20),
             _buildSettingsItem(Icons.edit, 'Edit Profile', () {}),
-            _buildSettingsItem(Icons.notifications, 'Notifications', () {}),
+            _buildSettingsItem(Icons.settings, 'Settings', () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => SettingsScreen()));
+            }),
             _buildSettingsItem(Icons.privacy_tip, 'Privacy Settings', () {}),
             _buildSettingsItem(Icons.help, 'Help & Support', () {}),
             _buildSettingsItem(Icons.info, 'About Hermony', () {}),
-            _buildSettingsItem(Icons.logout, 'Sign Out', () {}, isDestructive: true),
+            _buildSettingsItem(Icons.logout, 'Sign Out', _signOut, isDestructive: true),
             SizedBox(height: 20),
           ],
         ),
@@ -598,5 +603,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
+  }
+
+  void _signOut() async {
+    try {
+      await MockAuthService().signOut();
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => LoginScreen()),
+        (route) => false,
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Sign out failed')),
+      );
+    }
   }
 }

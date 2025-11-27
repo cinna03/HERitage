@@ -3,6 +3,8 @@ import 'package:coursehub/utils/index.dart';
 import '../../models/chat_room.dart';
 import 'chat_room_screen.dart';
 import 'mentors_screen.dart';
+import '../../services/mock_firestore_service.dart';
+import '../../services/mock_auth_service.dart';
 
 class CommunityScreen extends StatefulWidget {
   @override
@@ -11,6 +13,14 @@ class CommunityScreen extends StatefulWidget {
 
 class _CommunityScreenState extends State<CommunityScreen> with TickerProviderStateMixin {
   late TabController _tabController;
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _contentController = TextEditingController();
+  
+  List<ForumPost> forumPosts = [
+    ForumPost('Sarah M.', 'My First Digital Art Journey', 'Hey everyone! Just finished my first digital painting. What do you think? I\'ve been practicing for weeks and finally feel confident enough to share.', '2 hours ago', 12, 5, null),
+    ForumPost('Amina K.', 'Color Theory Tips', 'Here are some color theory basics that helped me improve my artwork dramatically. Understanding complementary colors changed everything!', '4 hours ago', 8, 3, null),
+    ForumPost('Grace O.', 'Workshop Feedback', 'The latest workshop on brush techniques was amazing! Has anyone tried implementing the new methods we learned?', '1 day ago', 15, 7, null),
+  ];
 
   @override
   void initState() {
@@ -59,50 +69,35 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
   Widget _buildForumsTab() {
     return Container(
       color: Color(0xFFF8F8F8),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildChatBubble(
-              'Hey everyone! Just finished my first digital painting. What do you think?',
-              true,
+      child: forumPosts.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.forum, size: 64, color: mediumGrey),
+                  SizedBox(height: 16),
+                  Text(
+                    'No posts yet',
+                    style: TextStyle(fontSize: 18, color: mediumGrey),
+                  ),
+                  Text(
+                    'Be the first to start a discussion!',
+                    style: TextStyle(fontSize: 14, color: mediumGrey),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: EdgeInsets.all(20),
+              itemCount: forumPosts.length,
+              itemBuilder: (context, index) {
+                return _buildForumPostCard(forumPosts[index]);
+              },
             ),
-            SizedBox(height: 20),
-            _buildChatBubble(
-              'That looks amazing! I love the color choices. Keep up the great work!',
-              false,
-            ),
-          ],
-        ),
-      ),
     );
   }
 
-  Widget _buildChatBubble(String message, bool isUser) {
-    return Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 40),
-        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-        decoration: BoxDecoration(
-          color: isUser ? lightPink : Color(0xFF4A4A4A),
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(25),
-            topRight: Radius.circular(25),
-            bottomLeft: isUser ? Radius.circular(25) : Radius.circular(5),
-            bottomRight: isUser ? Radius.circular(5) : Radius.circular(25),
-          ),
-        ),
-        child: Text(
-          message,
-          style: TextStyle(
-            color: isUser ? darkGrey : white,
-            fontSize: 16,
-          ),
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildForumPostCard(ForumPost post) {
     return Container(
@@ -334,6 +329,9 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
   }
 
   void _showCreatePostDialog() {
+    _titleController.clear();
+    _contentController.clear();
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -342,6 +340,7 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
+              controller: _titleController,
               decoration: InputDecoration(
                 labelText: 'Title',
                 border: OutlineInputBorder(),
@@ -349,6 +348,7 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
             ),
             SizedBox(height: 15),
             TextField(
+              controller: _contentController,
               maxLines: 3,
               decoration: InputDecoration(
                 labelText: 'Content',
@@ -363,11 +363,39 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
             child: Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Post created successfully!')),
-              );
+            onPressed: () async {
+              if (_titleController.text.trim().isNotEmpty && 
+                  _contentController.text.trim().isNotEmpty) {
+                try {
+                  await MockFirestoreService().createPost({
+                    'title': _titleController.text.trim(),
+                    'content': _contentController.text.trim(),
+                    'author': MockAuthService().currentUserEmail ?? 'Anonymous',
+                    'timestamp': DateTime.now(),
+                    'likes': 0,
+                    'comments': 0,
+                  });
+                  setState(() {
+                    forumPosts.insert(0, ForumPost(
+                      'You',
+                      _titleController.text.trim(),
+                      _contentController.text.trim(),
+                      'Just now',
+                      0,
+                      0,
+                      null,
+                    ));
+                  });
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Post created successfully!')),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to create post')),
+                  );
+                }
+              }
             },
             child: Text('Post'),
           ),

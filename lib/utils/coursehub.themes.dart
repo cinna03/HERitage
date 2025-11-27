@@ -1,4 +1,4 @@
-// Hermony app themes - light pink theme
+// HERmony app themes - light pink theme
 import 'package:flutter/material.dart';
 import 'index.dart';
 

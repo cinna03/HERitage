@@ -178,6 +178,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             Expanded(
               child: TextField(
                 controller: _messageController,
+                onSubmitted: (_) => _sendMessage(),
                 decoration: InputDecoration(
                   hintText: 'Type a message...',
                   border: OutlineInputBorder(

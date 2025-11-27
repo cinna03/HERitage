@@ -21,6 +21,41 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _bioController = TextEditingController();
+  bool _isLoading = false;
+
+  void _completeSetup() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() => _isLoading = true);
+      
+      try {
+        // Save profile data (mock implementation)
+        await Future.delayed(Duration(seconds: 1));
+        
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Profile setup completed successfully!'),
+            backgroundColor: successGreen,
+          ),
+        );
+        
+        // Navigate to dashboard
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => DashboardScreen()),
+          (route) => false,
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Setup failed. Please try again.'),
+            backgroundColor: errorRed,
+          ),
+        );
+      } finally {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -148,15 +183,24 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 Container(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        Navigator.of(context).pushAndRemoveUntil(
-                          MaterialPageRoute(builder: (context) => DashboardScreen()),
-                          (route) => false,
-                        );
-                      }
-                    },
-                    child: Text('Complete Setup', style: TextStyle(fontSize: 16)),
+                    onPressed: _isLoading ? null : _completeSetup,
+                    child: _isLoading 
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(white),
+                                ),
+                              ),
+                              SizedBox(width: 10),
+                              Text('Setting up...', style: TextStyle(fontSize: 16)),
+                            ],
+                          )
+                        : Text('Complete Setup', style: TextStyle(fontSize: 16)),
                     style: ElevatedButton.styleFrom(
                       padding: EdgeInsets.symmetric(vertical: 15),
                     ),

@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:coursehub/utils/index.dart';
 import 'package:coursehub/utils/theme_provider.dart';
 import 'welcome_screen.dart';
 
 class SplashScreen extends StatefulWidget {
-  final ThemeProvider themeProvider;
-  
-  SplashScreen({required this.themeProvider});
-  
   @override
   _SplashScreenState createState() => _SplashScreenState();
 }
@@ -23,7 +20,7 @@ class _SplashScreenState extends State<SplashScreen> {
     await Future.delayed(Duration(seconds: 3));
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => WelcomeScreen(themeProvider: widget.themeProvider)),
+      MaterialPageRoute(builder: (context) => WelcomeScreen()),
     );
   }
 
@@ -51,7 +48,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
                 SizedBox(height: 30),
                 Text(
-                  'Hermony',
+                  'HERmony',
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
@@ -75,13 +72,17 @@ class _SplashScreenState extends State<SplashScreen> {
             top: 50,
             right: 20,
             child: SafeArea(
-              child: IconButton(
-                onPressed: widget.themeProvider.toggleTheme,
-                icon: Icon(
-                  widget.themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
-                  color: primaryPink,
-                  size: 28,
-                ),
+              child: Consumer<ThemeProvider>(
+                builder: (context, themeProvider, child) {
+                  return IconButton(
+                    onPressed: themeProvider.toggleTheme,
+                    icon: Icon(
+                      themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                      color: primaryPink,
+                      size: 28,
+                    ),
+                  );
+                },
               ),
             ),
           ),

@@ -7,24 +7,36 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:coursehub/main.dart';
+import 'package:coursehub/ui/auth/login_screen.dart';
+import 'test_helper.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(MyApp());
+  setUpAll(() {
+    setupFirebaseAuthMocks();
+  });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  testWidgets('Login screen renders correctly', (WidgetTester tester) async {
+    await tester.pumpWidget(MaterialApp(home: LoginScreen()));
+    
+    expect(find.text('Login'), findsOneWidget);
+    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('Password'), findsOneWidget);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+  testWidgets('Login button is tappable', (WidgetTester tester) async {
+    await tester.pumpWidget(MaterialApp(home: LoginScreen()));
+    
+    final loginButton = find.widgetWithText(ElevatedButton, 'Login');
+    expect(loginButton, findsOneWidget);
+    
+    await tester.tap(loginButton);
     await tester.pump();
+  });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  testWidgets('Google sign-in button exists', (WidgetTester tester) async {
+    await tester.pumpWidget(MaterialApp(home: LoginScreen()));
+    
+    expect(find.text('Sign in with Google'), findsOneWidget);
   });
 }

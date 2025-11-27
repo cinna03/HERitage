@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:coursehub/utils/index.dart';
 import '../../models/event.dart';
 import 'event_detail_screen.dart';
+import '../../widgets/beauty_calendar.dart';
 
 class EventsScreen extends StatefulWidget {
   @override
@@ -14,7 +15,7 @@ class _EventsScreenState extends State<EventsScreen> with TickerProviderStateMix
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   final List<Event> upcomingEvents = [
@@ -110,6 +111,7 @@ class _EventsScreenState extends State<EventsScreen> with TickerProviderStateMix
           labelColor: white,
           unselectedLabelColor: white.withOpacity(0.7),
           tabs: [
+            Tab(text: 'Calendar'),
             Tab(text: 'Upcoming'),
             Tab(text: 'Live'),
             Tab(text: 'Past'),
@@ -119,6 +121,7 @@ class _EventsScreenState extends State<EventsScreen> with TickerProviderStateMix
       body: TabBarView(
         controller: _tabController,
         children: [
+          _buildCalendarTab(),
           _buildEventsList(upcomingEvents, 'upcoming'),
           _buildEventsList(liveEvents, 'live'),
           _buildEventsList(pastEvents, 'past'),
@@ -480,6 +483,33 @@ class _EventsScreenState extends State<EventsScreen> with TickerProviderStateMix
             },
             child: Text('Join Now'),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCalendarTab() {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(20),
+      child: Column(
+        children: [
+          BeautyCalendar(),
+          SizedBox(height: 20),
+          Text(
+            'Upcoming Events This Week',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: darkGrey,
+            ),
+          ),
+          SizedBox(height: 15),
+          ...upcomingEvents.take(2).map((event) => 
+            Container(
+              margin: EdgeInsets.only(bottom: 10),
+              child: _buildEventCard(event, 'upcoming'),
+            )
+          ).toList(),
         ],
       ),
     );

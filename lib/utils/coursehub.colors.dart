@@ -21,3 +21,8 @@ final Color black = Color(0xFF000000);
 final Color successGreen = Color(0xFF4CAF50);
 final Color warningOrange = Color(0xFFFF9800);
 final Color errorRed = Color(0xFFF44336);
+
+// Additional colors for compatibility
+final Color lightCyan = Color(0xFFE0F7FA);
+final Color blueGreyish = Color(0xFF607D8B);
+final Color lightReddish = Color(0xFFFFCDD2);
