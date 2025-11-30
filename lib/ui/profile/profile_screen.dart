@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:coursehub/utils/index.dart';
 import '../auth/login_screen.dart';
 import '../settings/settings_screen.dart';
-import '../../services/mock_auth_service.dart';
+import '../../providers/auth_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -607,7 +608,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _signOut() async {
     try {
-      await MockAuthService().signOut();
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.signOut();
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => LoginScreen()),

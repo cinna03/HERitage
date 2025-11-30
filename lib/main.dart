@@ -6,6 +6,9 @@ import 'package:coursehub/utils/theme_provider.dart';
 import 'package:coursehub/ui/splash_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/forum_provider.dart';
+import 'providers/chat_provider.dart';
+import 'providers/course_provider.dart';
+import 'providers/event_provider.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -28,6 +31,9 @@ class _HERmonyAppState extends State<HERmonyApp> {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ForumProvider()),
+        ChangeNotifierProvider(create: (_) => ChatProvider()),
+        ChangeNotifierProvider(create: (_) => CourseProvider()),
+        ChangeNotifierProvider(create: (_) => EventProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
       child: Consumer<ThemeProvider>(

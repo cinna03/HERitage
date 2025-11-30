@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:coursehub/utils/index.dart';
+import '../../services/firestore_service.dart';
+import '../../providers/auth_provider.dart';
 
 class HomeTab extends StatefulWidget {
   @override
@@ -9,10 +12,14 @@ class HomeTab extends StatefulWidget {
 class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
   late List<AnimationController> _controllers;
   late List<Animation<Offset>> _animations;
+  final FirestoreService _firestoreService = FirestoreService();
+  Map<String, dynamic>? _userStats;
+  bool _isLoadingStats = true;
 
   @override
   void initState() {
     super.initState();
+    _loadUserStatistics();
     _controllers = List.generate(5, (index) => 
       AnimationController(
         duration: Duration(seconds: 3 + index),
@@ -29,6 +36,34 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
         curve: Curves.easeInOut,
       ))
     ).toList();
+  }
+
+  Future<void> _loadUserStatistics() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.user;
+    if (user != null) {
+      try {
+        final stats = await _firestoreService.getUserStatistics(user.uid);
+        setState(() {
+          _userStats = stats;
+          _isLoadingStats = false;
+        });
+      } catch (e) {
+        setState(() {
+          _userStats = {
+            'coursesCompleted': 0,
+            'postsCount': 0,
+            'totalHours': 0,
+            'certificatesEarned': 0,
+          };
+          _isLoadingStats = false;
+        });
+      }
+    } else {
+      setState(() {
+        _isLoadingStats = false;
+      });
+    }
   }
 
   @override
@@ -104,25 +139,32 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
           ),
           SizedBox(width: 15),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Welcome back!',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: mediumGrey,
-                  ),
-                ),
-                Text(
-                  'Creative Sister',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: darkGrey,
-                  ),
-                ),
-              ],
+            child: Consumer<AuthProvider>(
+              builder: (context, authProvider, child) {
+                final userName = authProvider.user?.displayName ?? 
+                                authProvider.userEmail?.split('@')[0] ?? 
+                                'Creative Sister';
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome back!',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: mediumGrey,
+                      ),
+                    ),
+                    Text(
+                      userName,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: darkGrey,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
           IconButton(
@@ -387,16 +429,42 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
             Row(
               children: [
                 Expanded(
-                  child: _buildProgressItem('Courses\nCompleted', '3', Icons.school),
+                  child: _buildProgressItem(
+                    'Courses\nCompleted', 
+                    _isLoadingStats ? '...' : '${_userStats?['coursesCompleted'] ?? 0}', 
+                    Icons.school
+                  ),
                 ),
                 Expanded(
-                  child: _buildProgressItem('Hours\nLearned', '24', Icons.access_time),
+                  child: _buildProgressItem(
+                    'Hours\nLearned', 
+                    _isLoadingStats ? '...' : '${_userStats?['totalHours'] ?? 0}', 
+                    Icons.access_time
+                  ),
                 ),
                 Expanded(
-                  child: _buildProgressItem('Certificates\nEarned', '2', Icons.card_membership),
+                  child: _buildProgressItem(
+                    'Certificates\nEarned', 
+                    _isLoadingStats ? '...' : '${_userStats?['certificatesEarned'] ?? 0}', 
+                    Icons.card_membership
+                  ),
                 ),
               ],
             ),
+            if (_userStats != null) ...[
+              SizedBox(height: 15),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildProgressItem(
+                      'Community\nPosts', 
+                      '${_userStats?['postsCount'] ?? 0}', 
+                      Icons.forum
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),

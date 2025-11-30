@@ -40,5 +40,12 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
+# Firebase configuration files (keep templates, ignore actual configs)
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+# But keep the template files
+!android/app/google-services.json.template
+!ios/Runner/GoogleService-Info.plist.template
+
 # Exceptions to above rules.
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages

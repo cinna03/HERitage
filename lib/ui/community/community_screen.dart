@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:coursehub/utils/index.dart';
 import '../../models/chat_room.dart';
 import 'chat_room_screen.dart';
 import 'mentors_screen.dart';
-import '../../services/mock_firestore_service.dart';
-import '../../services/mock_auth_service.dart';
+import '../../providers/forum_provider.dart';
+import '../../providers/auth_provider.dart';
 
 class CommunityScreen extends StatefulWidget {
   @override
@@ -15,12 +17,6 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
   late TabController _tabController;
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
-  
-  List<ForumPost> forumPosts = [
-    ForumPost('Sarah M.', 'My First Digital Art Journey', 'Hey everyone! Just finished my first digital painting. What do you think? I\'ve been practicing for weeks and finally feel confident enough to share.', '2 hours ago', 12, 5, null),
-    ForumPost('Amina K.', 'Color Theory Tips', 'Here are some color theory basics that helped me improve my artwork dramatically. Understanding complementary colors changed everything!', '4 hours ago', 8, 3, null),
-    ForumPost('Grace O.', 'Workshop Feedback', 'The latest workshop on brush techniques was amazing! Has anyone tried implementing the new methods we learned?', '1 day ago', 15, 7, null),
-  ];
 
   @override
   void initState() {
@@ -67,37 +63,186 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
   }
 
   Widget _buildForumsTab() {
-    return Container(
-      color: Color(0xFFF8F8F8),
-      child: forumPosts.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.forum, size: 64, color: mediumGrey),
-                  SizedBox(height: 16),
-                  Text(
-                    'No posts yet',
-                    style: TextStyle(fontSize: 18, color: mediumGrey),
-                  ),
-                  Text(
-                    'Be the first to start a discussion!',
-                    style: TextStyle(fontSize: 14, color: mediumGrey),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: EdgeInsets.all(20),
-              itemCount: forumPosts.length,
-              itemBuilder: (context, index) {
-                return _buildForumPostCard(forumPosts[index]);
-              },
+    return Consumer<ForumProvider>(
+      builder: (context, forumProvider, child) {
+        if (forumProvider.isLoading && forumProvider.posts.isEmpty) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        if (forumProvider.posts.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.forum, size: 64, color: mediumGrey),
+                SizedBox(height: 16),
+                Text(
+                  'No posts yet',
+                  style: TextStyle(fontSize: 18, color: mediumGrey),
+                ),
+                Text(
+                  'Be the first to start a discussion!',
+                  style: TextStyle(fontSize: 14, color: mediumGrey),
+                ),
+              ],
             ),
+          );
+        }
+
+        return Container(
+          color: Color(0xFFF8F8F8),
+          child: ListView.builder(
+            padding: EdgeInsets.all(20),
+            itemCount: forumProvider.posts.length,
+            itemBuilder: (context, index) {
+              final post = forumProvider.posts[index];
+              return _buildForumPostCardFromMap(post);
+            },
+          ),
+        );
+      },
     );
   }
 
 
+
+  Widget _buildForumPostCardFromMap(Map<String, dynamic> post) {
+    final author = post['author'] ?? 'Anonymous';
+    final title = post['title'] ?? '';
+    final content = post['content'] ?? '';
+    final timestamp = _formatTimestamp(post['timestamp']);
+    final likes = post['likes'] ?? 0;
+    final comments = post['comments'] ?? 0;
+    final postId = post['id'] ?? '';
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 20),
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: lightPink.withOpacity(0.3),
+            blurRadius: 10,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: primaryPink,
+                child: Icon(Icons.person, color: white, size: 20),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      author,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: darkGrey,
+                      ),
+                    ),
+                    Text(
+                      timestamp,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: mediumGrey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuButton(
+                icon: Icon(Icons.more_vert, color: mediumGrey),
+                itemBuilder: (context) => [
+                  PopupMenuItem(child: Text('Report'), value: 'report'),
+                  PopupMenuItem(child: Text('Share'), value: 'share'),
+                ],
+              ),
+            ],
+          ),
+          SizedBox(height: 15),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: darkGrey,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            content,
+            style: TextStyle(
+              fontSize: 14,
+              color: mediumGrey,
+              height: 1.4,
+            ),
+          ),
+          SizedBox(height: 15),
+          Row(
+            children: [
+              Consumer<ForumProvider>(
+                builder: (context, forumProvider, child) {
+                  return InkWell(
+                    onTap: () => forumProvider.likePost(postId),
+                    child: Row(
+                      children: [
+                        Icon(Icons.favorite_border, size: 20, color: primaryPink),
+                        SizedBox(width: 4),
+                        Text(
+                          '$likes',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: primaryPink,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              SizedBox(width: 20),
+              _buildInteractionButton(Icons.comment_outlined, '$comments', mediumGrey),
+              SizedBox(width: 20),
+              _buildInteractionButton(Icons.share_outlined, 'Share', mediumGrey),
+              Spacer(),
+              TextButton(
+                onPressed: () {},
+                child: Text('View Comments', style: TextStyle(color: primaryPink)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatTimestamp(dynamic timestamp) {
+    if (timestamp == null) return 'Just now';
+    if (timestamp is Timestamp) {
+      final dateTime = timestamp.toDate();
+      final now = DateTime.now();
+      final difference = now.difference(dateTime);
+      
+      if (difference.inMinutes < 1) return 'Just now';
+      if (difference.inMinutes < 60) return '${difference.inMinutes}m ago';
+      if (difference.inHours < 24) return '${difference.inHours}h ago';
+      if (difference.inDays < 7) return '${difference.inDays}d ago';
+      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+    }
+    return 'Just now';
+  }
 
   Widget _buildForumPostCard(ForumPost post) {
     return Container(
@@ -366,33 +511,29 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
             onPressed: () async {
               if (_titleController.text.trim().isNotEmpty && 
                   _contentController.text.trim().isNotEmpty) {
+                final forumProvider = Provider.of<ForumProvider>(context, listen: false);
+                final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                
                 try {
-                  await MockFirestoreService().createPost({
-                    'title': _titleController.text.trim(),
-                    'content': _contentController.text.trim(),
-                    'author': MockAuthService().currentUserEmail ?? 'Anonymous',
-                    'timestamp': DateTime.now(),
-                    'likes': 0,
-                    'comments': 0,
-                  });
-                  setState(() {
-                    forumPosts.insert(0, ForumPost(
-                      'You',
-                      _titleController.text.trim(),
-                      _contentController.text.trim(),
-                      'Just now',
-                      0,
-                      0,
-                      null,
-                    ));
-                  });
+                  final author = authProvider.userEmail?.split('@')[0] ?? 
+                                 authProvider.user?.displayName ?? 
+                                 'Anonymous';
+                  
+                  await forumProvider.createPost(
+                    _titleController.text.trim(),
+                    _contentController.text.trim(),
+                    author,
+                  );
+                  
+                  _titleController.clear();
+                  _contentController.clear();
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Post created successfully!')),
                   );
                 } catch (e) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to create post')),
+                    SnackBar(content: Text('Failed to create post: ${e.toString()}')),
                   );
                 }
               }
