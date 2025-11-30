@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'index.dart';
 
 final TextStyle courseStyle = TextStyle(
-  color: mainBlue,
+  color: primaryPink,
 );
 
 final TextStyle hubStyle = TextStyle(
