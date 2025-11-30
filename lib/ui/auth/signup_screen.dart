@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:coursehub/utils/index.dart';
 import '../onboarding/interest_selection_screen.dart';
-import '../../services/mock_auth_service.dart';
+import '../../providers/auth_provider.dart';
 
 class SignUpScreen extends StatefulWidget {
   @override
@@ -15,19 +16,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  final MockAuthService _authService = MockAuthService();
 
   void _signUp() async {
     if (_formKey.currentState!.validate()) {
-      try {
-        await _authService.signUpWithEmail(_emailController.text, _passwordController.text);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final success = await authProvider.signUpWithEmail(_emailController.text, _passwordController.text);
+      
+      if (success) {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => InterestSelectionScreen()),
         );
-      } catch (e) {
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sign up failed: ${e.toString()}')),
+          SnackBar(content: Text('Sign up failed: ${authProvider.error}')),
         );
       }
     }
@@ -133,15 +135,28 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   },
                 ),
                 SizedBox(height: 40),
-                Container(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _signUp,
-                    child: Text('Sign Up', style: TextStyle(fontSize: 16)),
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 15),
-                    ),
-                  ),
+                Consumer<AuthProvider>(
+                  builder: (context, authProvider, child) {
+                    return Container(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: authProvider.isLoading ? null : _signUp,
+                        child: authProvider.isLoading
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(white),
+                                ),
+                              )
+                            : Text('Sign Up', style: TextStyle(fontSize: 16)),
+                        style: ElevatedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 15),
+                        ),
+                      ),
+                    );
+                  },
                 ),
 
               ],

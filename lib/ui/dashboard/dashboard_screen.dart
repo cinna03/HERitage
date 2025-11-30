@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:coursehub/utils/index.dart';
 import 'package:coursehub/utils/theme_provider.dart';
+import '../../providers/auth_provider.dart';
 import 'home_tab.dart';
 import '../courses/courses_screen.dart';
 import '../community/community_screen.dart';
@@ -37,6 +38,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 onPressed: themeProvider.toggleTheme,
                 icon: Icon(
                   themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                  color: primaryPink,
+                ),
+              );
+            },
+          ),
+          Consumer<AuthProvider>(
+            builder: (context, authProvider, child) {
+              return IconButton(
+                onPressed: () async {
+                  await authProvider.signOut();
+                  Navigator.pushReplacementNamed(context, '/');
+                },
+                icon: Icon(
+                  Icons.logout,
                   color: primaryPink,
                 ),
               );

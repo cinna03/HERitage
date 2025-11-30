@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:coursehub/utils/index.dart';
 import '../dashboard/dashboard_screen.dart';
-import '../../services/mock_auth_service.dart';
+import '../../providers/auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -11,8 +12,6 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final MockAuthService _authService = MockAuthService();
-  bool _isLoading = false;
 
   void _login() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
@@ -22,35 +21,35 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
-    try {
-      await _authService.signInWithEmail(_emailController.text, _passwordController.text);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final success = await authProvider.signInWithEmail(_emailController.text, _passwordController.text);
+    
+    if (success) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => DashboardScreen()),
       );
-    } catch (e) {
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login failed: ${e.toString()}')),
+        SnackBar(content: Text('Login failed: ${authProvider.error}')),
       );
     }
-    setState(() => _isLoading = false);
   }
 
   void _signInWithGoogle() async {
-    setState(() => _isLoading = true);
-    try {
-      await _authService.signInWithGoogle();
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final success = await authProvider.signInWithGoogle();
+    
+    if (success) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => DashboardScreen()),
       );
-    } catch (e) {
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Google sign-in failed')),
+        SnackBar(content: Text('Google sign-in failed: ${authProvider.error}')),
       );
     }
-    setState(() => _isLoading = false);
   }
 
   @override
@@ -155,45 +154,62 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(height: 20),
                     
                     // Login button
-                    Container(
-                      width: 120,
-                      child: ElevatedButton(
-                        onPressed: _login,
-                        child: Text(
-                          'Login',
-                          style: TextStyle(
-                            color: white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
+                    Consumer<AuthProvider>(
+                      builder: (context, authProvider, child) {
+                        return Container(
+                          width: 120,
+                          child: ElevatedButton(
+                            onPressed: authProvider.isLoading ? null : _login,
+                            child: authProvider.isLoading 
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(white),
+                                    ),
+                                  )
+                                : Text(
+                                    'Login',
+                                    style: TextStyle(
+                                      color: white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryPink,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                            ),
                           ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryPink,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25),
-                          ),
-                          padding: EdgeInsets.symmetric(vertical: 12),
-                        ),
-                      ),
+                        );
+                      },
                     ),
                     SizedBox(height: 20),
                     
                     // Google Sign-In button
-                    Container(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: _isLoading ? null : _signInWithGoogle,
-                        icon: Icon(Icons.login, color: primaryPink),
-                        label: Text(
-                          'Sign in with Google',
-                          style: TextStyle(color: primaryPink),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: primaryPink),
-                          padding: EdgeInsets.symmetric(vertical: 12),
-                        ),
-                      ),
+                    Consumer<AuthProvider>(
+                      builder: (context, authProvider, child) {
+                        return Container(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: authProvider.isLoading ? null : _signInWithGoogle,
+                            icon: Icon(Icons.login, color: primaryPink),
+                            label: Text(
+                              'Sign in with Google',
+                              style: TextStyle(color: primaryPink),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: primaryPink),
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -240,7 +256,8 @@ class _LoginScreenState extends State<LoginScreen> {
           ElevatedButton(
             onPressed: () async {
               try {
-                await _authService.sendPasswordResetEmail(emailController.text);
+                final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                await authProvider.sendPasswordResetEmail(emailController.text);
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Password reset email sent!')),
