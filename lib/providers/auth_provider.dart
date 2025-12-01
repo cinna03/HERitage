@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
@@ -7,6 +8,7 @@ class AuthProvider extends ChangeNotifier {
   User? _user;
   bool _isLoading = false;
   String? _error;
+  StreamSubscription<User?>? _authStateSubscription;
 
   User? get user => _user;
   String? get userEmail => _user?.email;
@@ -16,10 +18,16 @@ class AuthProvider extends ChangeNotifier {
 
   AuthProvider() {
     _user = _authService.currentUser;
-    _authService.authStateChanges.listen((User? user) {
+    _authStateSubscription = _authService.authStateChanges.listen((User? user) {
       _user = user;
       notifyListeners();
     });
+  }
+
+  @override
+  void dispose() {
+    _authStateSubscription?.cancel();
+    super.dispose();
   }
 
   Future<bool> signInWithEmail(String email, String password) async {
@@ -74,7 +82,92 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> sendPasswordResetEmail(String email) async {
-    await _authService.sendPasswordResetEmail(email);
+    _setLoading(true);
+    try {
+      await _authService.sendPasswordResetEmail(email);
+      _error = null;
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Sends email verification to the current user
+  Future<void> sendEmailVerification() async {
+    _setLoading(true);
+    try {
+      await _authService.sendEmailVerification();
+      _error = null;
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Checks if the current user's email is verified
+  bool get isEmailVerified => _authService.isEmailVerified;
+
+  /// Reloads the current user to refresh email verification status
+  Future<void> reloadUser() async {
+    await _user?.reload();
+    _user = _authService.currentUser;
+    notifyListeners();
+  }
+
+  /// Verifies phone number and sends OTP code
+  /// Implements phone authentication with SMS verification
+  /// Uses Firebase PhoneAuthProvider for OTP delivery
+  Future<void> verifyPhoneNumber({
+    required String phoneNumber,
+    required void Function(String verificationId, int? resendToken) codeSent,
+    required void Function(FirebaseAuthException error) verificationFailed,
+    required void Function(String verificationId) codeAutoRetrievalTimeout,
+  }) async {
+    _setLoading(true);
+    try {
+      await _authService.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        codeSent: codeSent,
+        verificationFailed: verificationFailed,
+        codeAutoRetrievalTimeout: codeAutoRetrievalTimeout,
+      );
+      _error = null;
+    } catch (e) {
+      _error = e.toString();
+      if (e is FirebaseAuthException) {
+        verificationFailed(e);
+      } else {
+        verificationFailed(FirebaseAuthException(code: 'unknown', message: e.toString()));
+      }
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Signs in with phone number using OTP code
+  Future<bool> signInWithPhoneNumber({
+    required String verificationId,
+    required String smsCode,
+  }) async {
+    _setLoading(true);
+    try {
+      final result = await _authService.signInWithPhoneNumber(
+        verificationId: verificationId,
+        smsCode: smsCode,
+      );
+      _user = result?.user;
+      _error = null;
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
   }
 
   void _setLoading(bool loading) {

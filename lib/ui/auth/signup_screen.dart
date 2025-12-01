@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:coursehub/utils/index.dart';
-import '../onboarding/interest_selection_screen.dart';
 import '../../providers/auth_provider.dart';
+import 'email_verification_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   @override
@@ -23,9 +23,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
       final success = await authProvider.signUpWithEmail(_emailController.text, _passwordController.text);
       
       if (success) {
-        Navigator.push(
+        // Navigate to email verification screen
+        Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => InterestSelectionScreen()),
+          MaterialPageRoute(
+            builder: (context) => EmailVerificationScreen(email: _emailController.text),
+          ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

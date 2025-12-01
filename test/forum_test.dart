@@ -12,6 +12,7 @@ void main() {
     test('should initialize with empty posts', () {
       expect(forumProvider.posts, isEmpty);
       expect(forumProvider.isLoading, false);
+      expect(forumProvider.error, isNull);
     });
 
     test('should set loading state when creating post', () async {
@@ -24,6 +25,10 @@ void main() {
       }
       
       expect(forumProvider.isLoading, false);
+    });
+
+    test('should have error handling', () {
+      expect(forumProvider.error, isNull);
     });
   });
 }

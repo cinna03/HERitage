@@ -52,7 +52,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       '@creativesister',
                       style: TextStyle(
                         fontSize: 14,
-                        color: white.withOpacity(0.8),
+                        color: white.withValues(alpha: 0.8),
                       ),
                     ),
                   ],
@@ -106,7 +106,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: lightPink.withOpacity(0.3),
+            color: lightPink.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: Offset(0, 5),
           ),
@@ -216,7 +216,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               return Container(
                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: primaryPink.withOpacity(0.1),
+                  color: primaryPink.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(15),
                 ),
                 child: Text(
@@ -285,7 +285,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: lightPink.withOpacity(0.3)),
+          bottom: BorderSide(color: lightPink.withValues(alpha: 0.3)),
         ),
       ),
       child: Row(
@@ -294,7 +294,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 25),
@@ -385,7 +385,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: lightPink.withOpacity(0.3)),
+          bottom: BorderSide(color: lightPink.withValues(alpha: 0.3)),
         ),
       ),
       child: Row(
@@ -394,7 +394,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: primaryPink.withOpacity(0.1),
+              color: primaryPink.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: primaryPink, size: 20),
@@ -463,7 +463,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   borderRadius: BorderRadius.circular(15),
                   boxShadow: [
                     BoxShadow(
-                      color: lightPink.withOpacity(0.3),
+                      color: lightPink.withValues(alpha: 0.3),
                       blurRadius: 10,
                       offset: Offset(0, 5),
                     ),

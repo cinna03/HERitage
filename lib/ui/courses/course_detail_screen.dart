@@ -1,12 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:coursehub/utils/index.dart';
 import '../../models/course.dart';
+import '../../providers/course_provider.dart';
 import 'course_content_screen.dart';
 
-class CourseDetailScreen extends StatelessWidget {
+class CourseDetailScreen extends StatefulWidget {
   final Course course;
+  final String? courseId; // Firestore document ID
 
-  CourseDetailScreen({required this.course});
+  CourseDetailScreen({required this.course, this.courseId});
+
+  @override
+  _CourseDetailScreenState createState() => _CourseDetailScreenState();
+}
+
+class _CourseDetailScreenState extends State<CourseDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Load course data and progress if courseId is provided
+    if (widget.courseId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Provider.of<CourseProvider>(context, listen: false)
+            .loadCourse(widget.courseId!);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +49,7 @@ class CourseDetailScreen extends StatelessWidget {
                 ),
                 child: Center(
                   child: Icon(
-                    _getCategoryIcon(course.category),
+                    _getCategoryIcon(widget.course.category),
                     size: 80,
                     color: white,
                   ),
@@ -50,6 +70,10 @@ class CourseDetailScreen extends StatelessWidget {
                   children: [
                     _buildCourseHeader(),
                     SizedBox(height: 25),
+                    if (widget.courseId != null) ...[
+                      _buildProgressSection(),
+                      SizedBox(height: 25),
+                    ],
                     _buildCourseStats(),
                     SizedBox(height: 25),
                     _buildDescription(),
@@ -71,6 +95,89 @@ class CourseDetailScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildProgressSection() {
+    return Consumer<CourseProvider>(
+      builder: (context, courseProvider, child) {
+        if (widget.courseId == null || courseProvider.userProgress == null) {
+          return SizedBox.shrink();
+        }
+
+        final progress = (courseProvider.userProgress!['progress'] as num? ?? 0).toDouble() / 100;
+        final isCompleted = courseProvider.userProgress!['completed'] == true;
+
+        return Container(
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: white,
+            borderRadius: BorderRadius.circular(15),
+            boxShadow: [
+              BoxShadow(
+                color: lightPink.withValues(alpha: 0.3),
+                blurRadius: 10,
+                offset: Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Your Progress',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: darkGrey,
+                    ),
+                  ),
+                  if (isCompleted)
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: successGreen.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.check_circle, color: successGreen, size: 16),
+                          SizedBox(width: 4),
+                          Text(
+                            'Completed',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: successGreen,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+              SizedBox(height: 15),
+              LinearProgressIndicator(
+                value: progress,
+                backgroundColor: lightPink,
+                valueColor: AlwaysStoppedAnimation<Color>(primaryPink),
+                minHeight: 8,
+              ),
+              SizedBox(height: 10),
+              Text(
+                '${(progress * 100).toInt()}% Complete',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: mediumGrey,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildCourseHeader() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -79,7 +186,7 @@ class CourseDetailScreen extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                course.title,
+                widget.course.title,
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -90,11 +197,11 @@ class CourseDetailScreen extends StatelessWidget {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: primaryPink.withOpacity(0.1),
+                color: primaryPink.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(15),
               ),
               child: Text(
-                course.level,
+                widget.course.level,
                 style: TextStyle(
                   fontSize: 14,
                   color: primaryPink,
@@ -106,7 +213,7 @@ class CourseDetailScreen extends StatelessWidget {
         ),
         SizedBox(height: 10),
         Text(
-          course.description,
+          widget.course.description,
           style: TextStyle(
             fontSize: 16,
             color: mediumGrey,
@@ -125,7 +232,7 @@ class CourseDetailScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: lightPink.withOpacity(0.3),
+            color: lightPink.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: Offset(0, 5),
           ),
@@ -134,10 +241,10 @@ class CourseDetailScreen extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: _buildStatItem(Icons.star, course.rating.toString(), 'Rating'),
+            child: _buildStatItem(Icons.star, widget.course.rating.toString(), 'Rating'),
           ),
           Expanded(
-            child: _buildStatItem(Icons.people, '${course.students}', 'Students'),
+            child: _buildStatItem(Icons.people, '${widget.course.students}', 'Students'),
           ),
           Expanded(
             child: _buildStatItem(Icons.access_time, '8 hours', 'Duration'),
@@ -195,7 +302,7 @@ class CourseDetailScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(15),
           ),
           child: Text(
-            'This comprehensive course will take you from beginner to confident practitioner. You\'ll learn fundamental techniques, explore creative processes, and build a strong foundation in ${course.category.toLowerCase()}. Perfect for anyone looking to start their creative journey or enhance existing skills.',
+            'This comprehensive course will take you from beginner to confident practitioner. You\'ll learn fundamental techniques, explore creative processes, and build a strong foundation in ${widget.course.category.toLowerCase()}. Perfect for anyone looking to start their creative journey or enhance existing skills.',
             style: TextStyle(
               fontSize: 14,
               color: darkGrey,
@@ -366,7 +473,7 @@ class CourseDetailScreen extends StatelessWidget {
                 padding: EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   border: isLast ? null : Border(
-                    bottom: BorderSide(color: lightPink.withOpacity(0.5)),
+                    bottom: BorderSide(color: lightPink.withValues(alpha: 0.5)),
                   ),
                 ),
                 child: Row(
@@ -375,7 +482,7 @@ class CourseDetailScreen extends StatelessWidget {
                       width: 30,
                       height: 30,
                       decoration: BoxDecoration(
-                        color: primaryPink.withOpacity(0.1),
+                        color: primaryPink.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Center(
@@ -419,7 +526,10 @@ class CourseDetailScreen extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => CourseContentScreen(course: course),
+              builder: (context) => CourseContentScreen(
+                course: widget.course,
+                courseId: widget.courseId,
+              ),
             ),
           );
         },
@@ -444,4 +554,5 @@ class CourseDetailScreen extends StatelessWidget {
       default: return Icons.school;
     }
   }
+
 }

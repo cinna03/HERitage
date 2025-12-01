@@ -7,7 +7,7 @@ class BeautyCalendar extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: palePink.withOpacity(0.3),
+        color: palePink.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(15),
       ),
       child: Column(
@@ -33,7 +33,7 @@ class BeautyCalendar extends StatelessWidget {
           // Calendar grid
           Container(
             decoration: BoxDecoration(
-              color: white.withOpacity(0.9),
+              color: white.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: darkGrey, width: 2),
             ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:coursehub/utils/index.dart';
+import '../../utils/error_handler.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../../providers/auth_provider.dart';
 
@@ -15,9 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _login() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please fill all fields')),
-      );
+      ErrorHandler.showError(context, 'Please fill all fields', customMessage: 'Please fill all fields');
       return;
     }
 
@@ -25,14 +24,13 @@ class _LoginScreenState extends State<LoginScreen> {
     final success = await authProvider.signInWithEmail(_emailController.text, _passwordController.text);
     
     if (success) {
+      ErrorHandler.showSuccess(context, 'Welcome back!');
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => DashboardScreen()),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login failed: ${authProvider.error}')),
-      );
+      ErrorHandler.showError(context, authProvider.error);
     }
   }
 
@@ -41,14 +39,13 @@ class _LoginScreenState extends State<LoginScreen> {
     final success = await authProvider.signInWithGoogle();
     
     if (success) {
+      ErrorHandler.showSuccess(context, 'Signed in with Google!');
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => DashboardScreen()),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Google sign-in failed: ${authProvider.error}')),
-      );
+      ErrorHandler.showError(context, authProvider.error);
     }
   }
 
@@ -99,7 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     // Email field
                     Container(
                       decoration: BoxDecoration(
-                        color: Theme.of(context).cardColor.withOpacity(0.9),
+                        color: Theme.of(context).cardColor.withValues(alpha: 0.9),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: TextField(
@@ -119,7 +116,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     // Password field
                     Container(
                       decoration: BoxDecoration(
-                        color: Theme.of(context).cardColor.withOpacity(0.9),
+                        color: Theme.of(context).cardColor.withValues(alpha: 0.9),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: TextField(
@@ -145,7 +142,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: Text(
                           'Forget Password?',
                           style: TextStyle(
-                            color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.8),
+                            color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
                             fontSize: 14,
                           ),
                         ),
@@ -259,13 +256,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 final authProvider = Provider.of<AuthProvider>(context, listen: false);
                 await authProvider.sendPasswordResetEmail(emailController.text);
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Password reset email sent!')),
-                );
+                ErrorHandler.showSuccess(context, 'Password reset email sent! Check your inbox.');
               } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed to send reset email')),
-                );
+                Navigator.pop(context);
+                ErrorHandler.showError(context, e);
               }
             },
             child: Text('Send'),

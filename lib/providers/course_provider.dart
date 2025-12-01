@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,6 +12,7 @@ class CourseProvider extends ChangeNotifier {
   Map<String, dynamic>? _userProgress;
   bool _isLoading = false;
   String? _error;
+  StreamSubscription<QuerySnapshot>? _coursesSubscription;
 
   List<Map<String, dynamic>> get courses => _courses;
   Map<String, dynamic>? get currentCourse => _currentCourse;
@@ -22,8 +24,10 @@ class CourseProvider extends ChangeNotifier {
     _loadCourses();
   }
 
+  /// Loads courses from Firestore with real-time updates
   void _loadCourses() {
-    _firestoreService.getCourses().listen((snapshot) {
+    _coursesSubscription?.cancel();
+    _coursesSubscription = _firestoreService.getCourses().listen((snapshot) {
       _courses = snapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
         return {
@@ -39,6 +43,13 @@ class CourseProvider extends ChangeNotifier {
     });
   }
 
+  @override
+  void dispose() {
+    _coursesSubscription?.cancel();
+    super.dispose();
+  }
+
+  /// Loads a specific course and user's progress for that course
   Future<void> loadCourse(String courseId) async {
     _isLoading = true;
     _error = null;
@@ -57,7 +68,7 @@ class CourseProvider extends ChangeNotifier {
       final user = _auth.currentUser;
       if (user != null) {
         final progressDoc = await _firestoreService.getCourseProgress(user.uid, courseId);
-        if (progressDoc.exists) {
+        if (progressDoc != null && progressDoc.exists) {
           _userProgress = {
             'id': progressDoc.id,
             ...progressDoc.data() as Map<String, dynamic>,
@@ -75,6 +86,9 @@ class CourseProvider extends ChangeNotifier {
     }
   }
 
+  /// Updates user's progress for a course
+  /// [progress] is a percentage (0-100)
+  /// [hoursSpent] is optional and tracks time spent on the course
   Future<void> updateProgress(String courseId, int progress, {int? hoursSpent}) async {
     _isLoading = true;
     _error = null;
@@ -111,6 +125,8 @@ class CourseProvider extends ChangeNotifier {
     }
   }
 
+  /// Marks a course as complete and generates a certificate
+  /// Requires user authentication
   Future<void> markComplete(String courseId) async {
     _isLoading = true;
     _error = null;
@@ -124,12 +140,8 @@ class CourseProvider extends ChangeNotifier {
 
       await _firestoreService.markCourseComplete(user.uid, courseId);
       
-      // Create certificate
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('certificates')
-          .add({
+      // Create certificate using service
+      await _firestoreService.createCertificate(user.uid, {
         'courseId': courseId,
         'courseTitle': _currentCourse?['title'] ?? 'Course',
         'earnedAt': FieldValue.serverTimestamp(),

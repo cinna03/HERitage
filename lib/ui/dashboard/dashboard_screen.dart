@@ -65,7 +65,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           color: white,
           boxShadow: [
             BoxShadow(
-              color: lightPink.withOpacity(0.3),
+              color: lightPink.withValues(alpha: 0.3),
               blurRadius: 10,
               offset: Offset(0, -5),
             ),

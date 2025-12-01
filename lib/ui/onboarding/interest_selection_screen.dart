@@ -111,7 +111,7 @@ class _InterestSelectionScreenState extends State<InterestSelectionScreen> {
                               category.description,
                               style: TextStyle(
                                 fontSize: 12,
-                                color: isSelected ? white.withOpacity(0.8) : mediumGrey,
+                                color: isSelected ? white.withValues(alpha: 0.8) : mediumGrey,
                               ),
                               textAlign: TextAlign.center,
                             ),

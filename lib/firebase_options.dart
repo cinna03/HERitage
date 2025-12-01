@@ -27,10 +27,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.macOS:
         return macos;
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -44,37 +41,49 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'your-web-api-key',
-    appId: 'your-web-app-id',
-    messagingSenderId: 'your-sender-id',
-    projectId: 'your-project-id',
-    authDomain: 'your-project-id.firebaseapp.com',
-    storageBucket: 'your-project-id.appspot.com',
+    apiKey: 'AIzaSyBPneZZQHsbAJyAhz8n2YwNqV1ue0Tn4tg',
+    appId: '1:597720652794:web:21e0bfd77addcd2d042243',
+    messagingSenderId: '597720652794',
+    projectId: 'heritage-8ad80',
+    authDomain: 'heritage-8ad80.firebaseapp.com',
+    storageBucket: 'heritage-8ad80.firebasestorage.app',
+    measurementId: 'G-4TQN8PSJWK',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'your-android-api-key',
-    appId: 'your-android-app-id',
-    messagingSenderId: 'your-sender-id',
-    projectId: 'your-project-id',
-    storageBucket: 'your-project-id.appspot.com',
+    apiKey: 'AIzaSyDRshlGMBRpkspLIgTnz6a-sYzGkScZE3g',
+    appId: '1:597720652794:android:f2e901e7135828b6042243',
+    messagingSenderId: '597720652794',
+    projectId: 'heritage-8ad80',
+    storageBucket: 'heritage-8ad80.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'your-ios-api-key',
-    appId: 'your-ios-app-id',
-    messagingSenderId: 'your-sender-id',
-    projectId: 'your-project-id',
-    storageBucket: 'your-project-id.appspot.com',
-    iosBundleId: 'com.example.coursehub',
+    apiKey: 'AIzaSyD0QgVQQ_Wjxo0ktO1qAq1UxF2b_Lf3OgU',
+    appId: '1:597720652794:ios:6797dd15495daa39042243',
+    messagingSenderId: '597720652794',
+    projectId: 'heritage-8ad80',
+    storageBucket: 'heritage-8ad80.firebasestorage.app',
+    iosBundleId: 'co.zw.coursehub',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'your-ios-api-key',
-    appId: 'your-ios-app-id',
-    messagingSenderId: 'your-sender-id',
-    projectId: 'your-project-id',
-    storageBucket: 'your-project-id.appspot.com',
+    apiKey: 'AIzaSyD0QgVQQ_Wjxo0ktO1qAq1UxF2b_Lf3OgU',
+    appId: '1:597720652794:ios:087b5375dd916fc4042243',
+    messagingSenderId: '597720652794',
+    projectId: 'heritage-8ad80',
+    storageBucket: 'heritage-8ad80.firebasestorage.app',
     iosBundleId: 'com.example.coursehub',
   );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyBPneZZQHsbAJyAhz8n2YwNqV1ue0Tn4tg',
+    appId: '1:597720652794:web:38af29c2ead803d2042243',
+    messagingSenderId: '597720652794',
+    projectId: 'heritage-8ad80',
+    authDomain: 'heritage-8ad80.firebaseapp.com',
+    storageBucket: 'heritage-8ad80.firebasestorage.app',
+    measurementId: 'G-YG2HKDC8N8',
+  );
+
 }

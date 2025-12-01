@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:coursehub/utils/index.dart';
+import '../../utils/error_handler.dart';
 import '../../models/course.dart';
+import '../../providers/course_provider.dart';
 
 class CourseContentScreen extends StatefulWidget {
   final Course course;
+  final String? courseId; // Firestore document ID
 
-  CourseContentScreen({required this.course});
+  CourseContentScreen({required this.course, this.courseId});
 
   @override
   _CourseContentScreenState createState() => _CourseContentScreenState();
@@ -32,11 +36,45 @@ class _CourseContentScreenState extends State<CourseContentScreen> {
   void initState() {
     super.initState();
     _calculateProgress();
+    // Load course progress if courseId is provided
+    if (widget.courseId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Provider.of<CourseProvider>(context, listen: false)
+            .loadCourse(widget.courseId!);
+      });
+    }
   }
 
   void _calculateProgress() {
     int completedLessons = lessons.where((lesson) => lesson.isCompleted).length;
     progress = completedLessons / lessons.length;
+  }
+
+  Future<void> _updateProgress(int lessonIndex) async {
+    if (widget.courseId == null) return;
+    
+    final courseProvider = Provider.of<CourseProvider>(context, listen: false);
+    final newProgress = ((lessonIndex + 1) / lessons.length * 100).round();
+    
+    try {
+      await courseProvider.updateProgress(widget.courseId!, newProgress);
+      _calculateProgress();
+    } catch (e) {
+      ErrorHandler.showError(context, e);
+    }
+  }
+
+  Future<void> _markCourseComplete() async {
+    if (widget.courseId == null) return;
+    
+    final courseProvider = Provider.of<CourseProvider>(context, listen: false);
+    
+    try {
+      await courseProvider.markComplete(widget.courseId!);
+      ErrorHandler.showSuccess(context, '🎉 Congratulations! Course completed! Certificate earned.');
+    } catch (e) {
+      ErrorHandler.showError(context, e);
+    }
   }
 
   @override
@@ -64,52 +102,67 @@ class _CourseContentScreenState extends State<CourseContentScreen> {
   }
 
   Widget _buildProgressHeader() {
-    return Container(
-      padding: EdgeInsets.all(25),
-      decoration: BoxDecoration(
-        color: primaryPink,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(25)),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Consumer<CourseProvider>(
+      builder: (context, courseProvider, child) {
+        // Use Firestore progress if available, otherwise use local progress
+        double displayProgress = progress;
+        bool isCompleted = false;
+        
+        if (widget.courseId != null && courseProvider.userProgress != null) {
+          displayProgress = (courseProvider.userProgress!['progress'] as num? ?? 0).toDouble() / 100;
+          isCompleted = courseProvider.userProgress!['completed'] == true;
+        } else {
+          isCompleted = progress == 1.0;
+        }
+
+        return Container(
+          padding: EdgeInsets.all(25),
+          decoration: BoxDecoration(
+            color: primaryPink,
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(25)),
+          ),
+          child: Column(
             children: [
-              Text(
-                'Course Progress',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: white,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Course Progress',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: white,
+                    ),
+                  ),
+                  Text(
+                    '${(displayProgress * 100).toInt()}% Complete',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: white,
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                '${(progress * 100).toInt()}% Complete',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: white,
-                ),
+              SizedBox(height: 15),
+              LinearProgressIndicator(
+                value: displayProgress,
+                backgroundColor: white.withValues(alpha: 0.3),
+                valueColor: AlwaysStoppedAnimation<Color>(white),
+                minHeight: 8,
+              ),
+              SizedBox(height: 15),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildProgressStat('Lessons', '${lessons.where((l) => l.isCompleted).length}/${lessons.length}'),
+                  _buildProgressStat('Time Left', '${_calculateTimeLeft()} min'),
+                  _buildProgressStat('Certificate', isCompleted ? 'Ready' : 'In Progress'),
+                ],
               ),
             ],
           ),
-          SizedBox(height: 15),
-          LinearProgressIndicator(
-            value: progress,
-            backgroundColor: white.withOpacity(0.3),
-            valueColor: AlwaysStoppedAnimation<Color>(white),
-            minHeight: 8,
-          ),
-          SizedBox(height: 15),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildProgressStat('Lessons', '${lessons.where((l) => l.isCompleted).length}/${lessons.length}'),
-              _buildProgressStat('Time Left', '${_calculateTimeLeft()} min'),
-              _buildProgressStat('Certificate', progress == 1.0 ? 'Ready' : 'In Progress'),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -129,7 +182,7 @@ class _CourseContentScreenState extends State<CourseContentScreen> {
           label,
           style: TextStyle(
             fontSize: 12,
-            color: white.withOpacity(0.8),
+            color: white.withValues(alpha: 0.8),
           ),
         ),
       ],
@@ -153,7 +206,7 @@ class _CourseContentScreenState extends State<CourseContentScreen> {
             border: isCurrentLesson ? Border.all(color: primaryPink, width: 2) : null,
             boxShadow: [
               BoxShadow(
-                color: lightPink.withOpacity(0.3),
+                color: lightPink.withValues(alpha: 0.3),
                 blurRadius: 10,
                 offset: Offset(0, 5),
               ),
@@ -168,7 +221,7 @@ class _CourseContentScreenState extends State<CourseContentScreen> {
                 color: lesson.isCompleted 
                     ? successGreen 
                     : isAccessible 
-                        ? primaryPink.withOpacity(0.1) 
+                        ? primaryPink.withValues(alpha: 0.1) 
                         : lightGrey,
                 shape: BoxShape.circle,
               ),
@@ -284,7 +337,7 @@ class _CourseContentScreenState extends State<CourseContentScreen> {
                           '${lesson.duration} minutes',
                           style: TextStyle(
                             fontSize: 14,
-                            color: white.withOpacity(0.8),
+                            color: white.withValues(alpha: 0.8),
                           ),
                         ),
                       ],
@@ -343,18 +396,22 @@ class _CourseContentScreenState extends State<CourseContentScreen> {
                       Container(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () {
+                          onPressed: () async {
                             setState(() {
                               lessons[index].isCompleted = true;
                               _calculateProgress();
                             });
+                            
+                            // Update progress in Firestore
+                            await _updateProgress(index);
+                            
+                            // Check if course is complete
+                            if (progress >= 1.0 && widget.courseId != null) {
+                              await _markCourseComplete();
+                            }
+                            
                             Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Lesson completed!'),
-                                backgroundColor: successGreen,
-                              ),
-                            );
+                            ErrorHandler.showSuccess(context, 'Lesson completed!');
                           },
                           child: Text('Mark as Complete'),
                           style: ElevatedButton.styleFrom(

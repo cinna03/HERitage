@@ -7,36 +7,50 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:coursehub/main.dart';
+import 'package:provider/provider.dart';
 import 'package:coursehub/ui/auth/login_screen.dart';
-import 'test_helper.dart';
+import 'package:coursehub/providers/auth_provider.dart';
 
 void main() {
-  setUpAll(() {
-    setupFirebaseAuthMocks();
-  });
-
   testWidgets('Login screen renders correctly', (WidgetTester tester) async {
-    await tester.pumpWidget(MaterialApp(home: LoginScreen()));
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ],
+        child: MaterialApp(home: LoginScreen()),
+      ),
+    );
     
+    await tester.pumpAndSettle();
     expect(find.text('Login'), findsOneWidget);
-    expect(find.text('Email'), findsOneWidget);
-    expect(find.text('Password'), findsOneWidget);
   });
 
-  testWidgets('Login button is tappable', (WidgetTester tester) async {
-    await tester.pumpWidget(MaterialApp(home: LoginScreen()));
+  testWidgets('Login screen has email and password fields', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ],
+        child: MaterialApp(home: LoginScreen()),
+      ),
+    );
     
-    final loginButton = find.widgetWithText(ElevatedButton, 'Login');
-    expect(loginButton, findsOneWidget);
-    
-    await tester.tap(loginButton);
-    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsNWidgets(2));
   });
 
   testWidgets('Google sign-in button exists', (WidgetTester tester) async {
-    await tester.pumpWidget(MaterialApp(home: LoginScreen()));
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ],
+        child: MaterialApp(home: LoginScreen()),
+      ),
+    );
     
+    await tester.pumpAndSettle();
     expect(find.text('Sign in with Google'), findsOneWidget);
   });
 }

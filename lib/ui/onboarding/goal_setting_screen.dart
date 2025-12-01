@@ -114,7 +114,7 @@ class _GoalSettingScreenState extends State<GoalSettingScreen> {
                                 width: 50,
                                 height: 50,
                                 decoration: BoxDecoration(
-                                  color: isSelected ? white : primaryPink.withOpacity(0.1),
+                                  color: isSelected ? white : primaryPink.withValues(alpha: 0.1),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(
@@ -141,7 +141,7 @@ class _GoalSettingScreenState extends State<GoalSettingScreen> {
                                       goal.description,
                                       style: TextStyle(
                                         fontSize: 14,
-                                        color: isSelected ? white.withOpacity(0.8) : mediumGrey,
+                                        color: isSelected ? white.withValues(alpha: 0.8) : mediumGrey,
                                       ),
                                     ),
                                   ],

@@ -4,11 +4,35 @@ Online E-Learning App for Empowering African Women in Arts
 
 # Screenshots
 
-Create Account Screen | Login Screen | Home Screen
------------- | -------------|--------------
+## App Screenshots
 
-Onboard Screen | Explore Screen | SingleCourse Screen
------------- | -------------|--------------
+The following screenshots demonstrate the key features of the HERmony app:
+
+### Authentication & Onboarding
+- **Create Account Screen**: User registration with email/password validation
+- **Login Screen**: Email/password and Google Sign-In options with password reset
+- **Email Verification Screen**: Email verification flow after signup
+- **Onboarding Screens**: Interest selection, experience level, and goal setting
+
+### Main App Features
+- **Home/Dashboard Screen**: Personalized dashboard with quick actions, featured courses, and progress tracking
+- **Courses Screen**: Browse and search courses by category with filtering
+- **Course Detail Screen**: Course information, enrollment, and progress tracking
+- **Course Content Screen**: Lesson navigation and completion tracking
+- **Community/Forum Screen**: Real-time forum posts, chat rooms, and mentors
+- **Chat Room Screen**: Real-time messaging within chat rooms
+- **Events Screen**: Upcoming, live, and past events with RSVP functionality
+- **Profile Screen**: User profile with statistics and settings
+
+### Design Features
+- **Responsive Design**: Works on phones (≤5.5") and tablets (≥6.7")
+- **Dark/Light Theme**: Theme switching with persistence
+- **Material Design**: Follows Material Design guidelines with proper tap targets
+
+> **Note:** To add screenshots, place image files in the `docs/screenshots/` directory and reference them using markdown image syntax:
+> ```markdown
+> ![Create Account](docs/screenshots/create_account.png) | ![Login](docs/screenshots/login.png)
+> ```
 
 ## Getting Started
 

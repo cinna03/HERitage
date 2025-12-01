@@ -147,7 +147,7 @@ class _MentorsScreenState extends State<MentorsScreen> {
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: lightPink.withOpacity(0.3),
+            color: lightPink.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: Offset(0, 5),
           ),
@@ -223,7 +223,7 @@ class _MentorsScreenState extends State<MentorsScreen> {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: primaryPink.withOpacity(0.1),
+                  color: primaryPink.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -274,7 +274,7 @@ class _MentorsScreenState extends State<MentorsScreen> {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: successGreen.withOpacity(0.1),
+                    color: successGreen.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -372,7 +372,7 @@ class _MentorsScreenState extends State<MentorsScreen> {
                           mentor.title,
                           style: TextStyle(
                             fontSize: 14,
-                            color: white.withOpacity(0.9),
+                            color: white.withValues(alpha: 0.9),
                           ),
                         ),
                       ],
@@ -454,7 +454,7 @@ class _MentorsScreenState extends State<MentorsScreen> {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: primaryPink.withOpacity(0.1),
+        color: primaryPink.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(15),
       ),
       child: Text(
@@ -473,7 +473,7 @@ class _MentorsScreenState extends State<MentorsScreen> {
       margin: EdgeInsets.only(bottom: 15),
       padding: EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: lightGrey.withOpacity(0.3),
+        color: lightGrey.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(

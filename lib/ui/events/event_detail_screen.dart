@@ -123,7 +123,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: primaryPink.withOpacity(0.1),
+                color: primaryPink.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(15),
               ),
               child: Text(
@@ -140,7 +140,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: successGreen.withOpacity(0.1),
+                  color: successGreen.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(15),
                 ),
                 child: Row(
@@ -191,7 +191,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: lightPink.withOpacity(0.3),
+            color: lightPink.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: Offset(0, 5),
           ),
@@ -216,7 +216,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: primaryPink.withOpacity(0.1),
+            color: primaryPink.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: primaryPink, size: 20),
@@ -451,7 +451,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 padding: EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   border: isLast ? null : Border(
-                    bottom: BorderSide(color: lightPink.withOpacity(0.5)),
+                    bottom: BorderSide(color: lightPink.withValues(alpha: 0.5)),
                   ),
                 ),
                 child: Row(
@@ -460,7 +460,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       width: 30,
                       height: 30,
                       decoration: BoxDecoration(
-                        color: primaryPink.withOpacity(0.1),
+                        color: primaryPink.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Center(

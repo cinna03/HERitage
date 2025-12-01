@@ -1,25 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:coursehub/utils/index.dart';
-import '../../services/firestore_service.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/user_stats_provider.dart';
 
 class HomeTab extends StatefulWidget {
   @override
   _HomeTabState createState() => _HomeTabState();
 }
 
+/// State class for HomeTab widget
+/// Manages animated background bubbles and displays user dashboard content
 class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
   late List<AnimationController> _controllers;
   late List<Animation<Offset>> _animations;
-  final FirestoreService _firestoreService = FirestoreService();
-  Map<String, dynamic>? _userStats;
-  bool _isLoadingStats = true;
 
   @override
   void initState() {
     super.initState();
-    _loadUserStatistics();
+    // Initialize 5 animation controllers with varying durations for background bubbles
+    // Each bubble animates independently to create a dynamic background effect
     _controllers = List.generate(5, (index) => 
       AnimationController(
         duration: Duration(seconds: 3 + index),
@@ -27,6 +27,8 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
       )..repeat(reverse: true)
     );
     
+    // Create offset animations for each bubble to move across the screen
+    // Uses curved animation for smooth, natural movement
     _animations = _controllers.map((controller) => 
       Tween<Offset>(
         begin: Offset(-0.5, -0.5),
@@ -36,34 +38,6 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
         curve: Curves.easeInOut,
       ))
     ).toList();
-  }
-
-  Future<void> _loadUserStatistics() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final user = authProvider.user;
-    if (user != null) {
-      try {
-        final stats = await _firestoreService.getUserStatistics(user.uid);
-        setState(() {
-          _userStats = stats;
-          _isLoadingStats = false;
-        });
-      } catch (e) {
-        setState(() {
-          _userStats = {
-            'coursesCompleted': 0,
-            'postsCount': 0,
-            'totalHours': 0,
-            'certificatesEarned': 0,
-          };
-          _isLoadingStats = false;
-        });
-      }
-    } else {
-      setState(() {
-        _isLoadingStats = false;
-      });
-    }
   }
 
   @override
@@ -93,7 +67,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                     height: 60 + (index * 20),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: lightPink.withOpacity(0.3 - (index * 0.05)),
+                      color: lightPink.withValues(alpha: 0.3 - (index * 0.05)),
                     ),
                   ),
                 );
@@ -127,6 +101,8 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
     );
   }
 
+  /// Builds the header section with user avatar and welcome message
+  /// Displays user name from AuthProvider or defaults to 'Creative Sister'
   Widget _buildHeader() {
     return Padding(
       padding: EdgeInsets.all(20),
@@ -176,6 +152,8 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
     );
   }
 
+  /// Builds the welcome card showing course progress
+  /// Displays gradient card with progress indicator and continue button
   Widget _buildWelcomeCard() {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 20),
@@ -204,13 +182,13 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
             'You\'re 60% through your current course',
             style: TextStyle(
               fontSize: 16,
-              color: white.withOpacity(0.9),
+              color: white.withValues(alpha: 0.9),
             ),
           ),
           SizedBox(height: 15),
           LinearProgressIndicator(
             value: 0.6,
-            backgroundColor: white.withOpacity(0.3),
+            backgroundColor: white.withValues(alpha: 0.3),
             valueColor: AlwaysStoppedAnimation<Color>(white),
           ),
           SizedBox(height: 15),
@@ -230,6 +208,8 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
     );
   }
 
+  /// Builds the quick actions section with 4 action cards
+  /// Provides shortcuts to Courses, Mentors, Events, and Community
   Widget _buildQuickActions() {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20),
@@ -265,6 +245,10 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
     );
   }
 
+  /// Builds an individual action card widget
+  /// [title] - The action title to display
+  /// [icon] - The icon to show for this action
+  /// [color] - The primary color for the icon background
   Widget _buildActionCard(String title, IconData icon, Color color) {
     return Container(
       padding: EdgeInsets.all(20),
@@ -273,7 +257,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: lightPink.withOpacity(0.3),
+            color: lightPink.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: Offset(0, 5),
           ),
@@ -285,7 +269,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 25),
@@ -305,6 +289,8 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
     );
   }
 
+  /// Builds the featured courses horizontal scrolling section
+  /// Displays a list of recommended courses in a horizontal ListView
   Widget _buildFeaturedCourses() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -345,7 +331,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                   borderRadius: BorderRadius.circular(15),
                   boxShadow: [
                     BoxShadow(
-                      color: lightPink.withOpacity(0.3),
+                      color: lightPink.withValues(alpha: 0.3),
                       blurRadius: 10,
                       offset: Offset(0, 5),
                     ),
@@ -357,7 +343,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                     Container(
                       height: 120,
                       decoration: BoxDecoration(
-                        color: primaryPink.withOpacity(0.1),
+                        color: primaryPink.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
                       ),
                       child: Center(
@@ -398,6 +384,9 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
     );
   }
 
+  /// Builds the progress section showing user statistics
+  /// Displays courses completed, hours learned, certificates earned, and community posts
+  /// Uses UserStatsProvider for real-time data updates
   Widget _buildProgressSection() {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20),
@@ -408,7 +397,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
           borderRadius: BorderRadius.circular(15),
           boxShadow: [
             BoxShadow(
-              color: lightPink.withOpacity(0.3),
+              color: lightPink.withValues(alpha: 0.3),
               blurRadius: 10,
               offset: Offset(0, 5),
             ),
@@ -431,59 +420,91 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                 Expanded(
                   child: _buildProgressItem(
                     'Courses\nCompleted', 
-                    _isLoadingStats ? '...' : '${_userStats?['coursesCompleted'] ?? 0}', 
+                    Consumer<UserStatsProvider>(
+                      builder: (context, statsProvider, child) {
+                        return Text(
+                          statsProvider.isLoading ? '...' : '${statsProvider.coursesCompleted}',
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: primaryPink),
+                        );
+                      },
+                    ), 
                     Icons.school
                   ),
                 ),
                 Expanded(
                   child: _buildProgressItem(
                     'Hours\nLearned', 
-                    _isLoadingStats ? '...' : '${_userStats?['totalHours'] ?? 0}', 
+                    Consumer<UserStatsProvider>(
+                      builder: (context, statsProvider, child) {
+                        return Text(
+                          statsProvider.isLoading ? '...' : '${statsProvider.totalHours}',
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: primaryPink),
+                        );
+                      },
+                    ), 
                     Icons.access_time
                   ),
                 ),
                 Expanded(
                   child: _buildProgressItem(
                     'Certificates\nEarned', 
-                    _isLoadingStats ? '...' : '${_userStats?['certificatesEarned'] ?? 0}', 
+                    Consumer<UserStatsProvider>(
+                      builder: (context, statsProvider, child) {
+                        return Text(
+                          statsProvider.isLoading ? '...' : '${statsProvider.certificatesEarned}',
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: primaryPink),
+                        );
+                      },
+                    ), 
                     Icons.card_membership
                   ),
                 ),
               ],
             ),
-            if (_userStats != null) ...[
-              SizedBox(height: 15),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildProgressItem(
-                      'Community\nPosts', 
-                      '${_userStats?['postsCount'] ?? 0}', 
-                      Icons.forum
+            Consumer<UserStatsProvider>(
+              builder: (context, statsProvider, child) {
+                if (statsProvider.isLoading) return SizedBox.shrink();
+                return Column(
+                  children: [
+                    SizedBox(height: 15),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildProgressItem(
+                            'Community\nPosts', 
+                            Text(
+                              '${statsProvider.postsCount}',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: primaryPink,
+                              ),
+                            ), 
+                            Icons.forum
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                );
+              },
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildProgressItem(String label, String value, IconData icon) {
+  /// Builds an individual progress item widget
+  /// [label] - The label text (e.g., "Courses Completed")
+  /// [value] - The value widget to display (can be text or Consumer widget)
+  /// [icon] - The icon to display for this metric
+  Widget _buildProgressItem(String label, Widget value, IconData icon) {
     return Column(
       children: [
         Icon(icon, color: primaryPink, size: 30),
         SizedBox(height: 10),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: primaryPink,
-          ),
-        ),
+        value,
         SizedBox(height: 5),
         Text(
           label,
@@ -519,7 +540,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
               borderRadius: BorderRadius.circular(15),
               boxShadow: [
                 BoxShadow(
-                  color: lightPink.withOpacity(0.3),
+                  color: lightPink.withValues(alpha: 0.3),
                   blurRadius: 10,
                   offset: Offset(0, 5),
                 ),

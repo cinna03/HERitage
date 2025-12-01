@@ -318,8 +318,8 @@ class _ExplorePageState extends State<ExplorePage> with TickerProviderStateMixin
                                   end: Alignment.bottomCenter,
 
                                   colors: [
-                                    const Color.fromARGB(255, 212, 0, 141).withOpacity(.1),
-                                    const Color.fromARGB(255, 244, 3, 212).withOpacity(.6),
+                                    const Color.fromARGB(255, 212, 0, 141).withValues(alpha: .1),
+                                    const Color.fromARGB(255, 244, 3, 212).withValues(alpha: .6),
 
                                   ],
                                   stops: [
@@ -373,7 +373,7 @@ class _ExplorePageState extends State<ExplorePage> with TickerProviderStateMixin
                             gradient: LinearGradient(
                               colors: index%2==0?[
                                 Colors.pinkAccent,
-                                Colors.pinkAccent.withOpacity(.4)
+                                Colors.pinkAccent.withValues(alpha: .4)
                               ] : [
                                 Colors.pinkAccent,
                                 Colors.pink
@@ -403,12 +403,12 @@ class _ExplorePageState extends State<ExplorePage> with TickerProviderStateMixin
 
                                   Row(
                                     children: [
-                                      Icon(Icons.access_alarm, color: Colors.white.withOpacity(.5)),
+                                      Icon(Icons.access_alarm, color: Colors.white.withValues(alpha: .5)),
                                       SizedBox(
                                         width: 10,
                                       ),
                                       Text('$index HRS', style:TextStyle(
-                                        color: Colors.white.withOpacity(.7),
+                                        color: Colors.white.withValues(alpha: .7),
                                         fontWeight: FontWeight.w800,
 
                                       ) ,)

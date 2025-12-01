@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:coursehub/utils/index.dart';
+import '../../widgets/loading_overlay.dart';
 import '../../models/event.dart';
+import '../../providers/event_provider.dart';
 import 'event_detail_screen.dart';
 import '../../widgets/beauty_calendar.dart';
 
@@ -16,6 +20,38 @@ class _EventsScreenState extends State<EventsScreen> with TickerProviderStateMix
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  List<Event> _convertToEventList(List<Map<String, dynamic>> eventsData, String filter) {
+    final now = DateTime.now();
+    return eventsData.map((data) {
+      final dateTime = data['dateTime'] is Timestamp
+          ? (data['dateTime'] as Timestamp).toDate()
+          : DateTime.parse(data['dateTime'] ?? DateTime.now().toIso8601String());
+      
+      // Filter events based on type
+      if (filter == 'upcoming' && dateTime.isBefore(now)) return null;
+      if (filter == 'live' && (dateTime.isAfter(now) || dateTime.isBefore(now.subtract(Duration(hours: 2))))) return null;
+      if (filter == 'past' && dateTime.isAfter(now)) return null;
+
+      final attendees = data['attendees'] as List<dynamic>? ?? [];
+      return Event(
+        data['title'] ?? 'Untitled Event',
+        data['description'] ?? '',
+        dateTime,
+        data['type'] ?? 'Event',
+        data['host'] ?? data['creatorName'] ?? 'Unknown',
+        attendees.length,
+        false, // Will be updated based on user RSVP
+        data['location'] ?? 'Online',
+      );
+    }).whereType<Event>().toList();
   }
 
   final List<Event> upcomingEvents = [
@@ -109,7 +145,7 @@ class _EventsScreenState extends State<EventsScreen> with TickerProviderStateMix
           controller: _tabController,
           indicatorColor: white,
           labelColor: white,
-          unselectedLabelColor: white.withOpacity(0.7),
+          unselectedLabelColor: white.withValues(alpha: 0.7),
           tabs: [
             Tab(text: 'Calendar'),
             Tab(text: 'Upcoming'),
@@ -118,43 +154,56 @@ class _EventsScreenState extends State<EventsScreen> with TickerProviderStateMix
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildCalendarTab(),
-          _buildEventsList(upcomingEvents, 'upcoming'),
-          _buildEventsList(liveEvents, 'live'),
-          _buildEventsList(pastEvents, 'past'),
-        ],
+      body: Consumer<EventProvider>(
+        builder: (context, eventProvider, child) {
+          if (eventProvider.isLoading && eventProvider.events.isEmpty) {
+            return LoadingIndicator(message: 'Loading events...');
+          }
+
+          if (eventProvider.error != null && eventProvider.events.isEmpty) {
+            return EmptyState(
+              icon: Icons.error_outline,
+              title: 'Error loading events',
+              message: eventProvider.error,
+              action: ElevatedButton(
+                onPressed: () {
+                  // Events will reload automatically
+                },
+                child: Text('Retry'),
+              ),
+            );
+          }
+
+          final upcoming = _convertToEventList(eventProvider.events, 'upcoming');
+          final live = _convertToEventList(eventProvider.events, 'live');
+          final past = _convertToEventList(eventProvider.events, 'past');
+
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              _buildCalendarTab(eventProvider),
+              _buildEventsList(upcoming.isEmpty ? upcomingEvents : upcoming, 'upcoming', eventProvider),
+              _buildEventsList(live.isEmpty ? liveEvents : live, 'live', eventProvider),
+              _buildEventsList(past.isEmpty ? pastEvents : past, 'past', eventProvider),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildEventsList(List<Event> events, String type) {
+  Widget _buildEventsList(List<Event> events, String type, EventProvider? eventProvider) {
     if (events.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              type == 'live' ? Icons.live_tv : Icons.event,
-              size: 60,
-              color: mediumGrey,
-            ),
-            SizedBox(height: 20),
-            Text(
-              type == 'live' 
-                  ? 'No live events right now'
-                  : type == 'upcoming'
-                      ? 'No upcoming events'
-                      : 'No past events',
-              style: TextStyle(
-                fontSize: 16,
-                color: mediumGrey,
-              ),
-            ),
-          ],
-        ),
+      return EmptyState(
+        icon: type == 'live' ? Icons.live_tv : Icons.event,
+        title: type == 'live' 
+            ? 'No live events right now'
+            : type == 'upcoming'
+                ? 'No upcoming events'
+                : 'No past events',
+        message: type == 'upcoming' 
+            ? 'Check back later for new events'
+            : null,
       );
     }
 
@@ -162,12 +211,12 @@ class _EventsScreenState extends State<EventsScreen> with TickerProviderStateMix
       padding: EdgeInsets.all(20),
       itemCount: events.length,
       itemBuilder: (context, index) {
-        return _buildEventCard(events[index], type);
+        return _buildEventCard(events[index], type, eventProvider);
       },
     );
   }
 
-  Widget _buildEventCard(Event event, String type) {
+  Widget _buildEventCard(Event event, String type, EventProvider? eventProvider) {
     return Container(
       margin: EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
@@ -176,7 +225,7 @@ class _EventsScreenState extends State<EventsScreen> with TickerProviderStateMix
         border: type == 'live' ? Border.all(color: errorRed, width: 2) : null,
         boxShadow: [
           BoxShadow(
-            color: lightPink.withOpacity(0.3),
+            color: lightPink.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: Offset(0, 5),
           ),
@@ -198,7 +247,7 @@ class _EventsScreenState extends State<EventsScreen> with TickerProviderStateMix
             Container(
               height: 120,
               decoration: BoxDecoration(
-                color: primaryPink.withOpacity(0.1),
+                color: primaryPink.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
               ),
               child: Stack(
@@ -250,7 +299,7 @@ class _EventsScreenState extends State<EventsScreen> with TickerProviderStateMix
                     child: Container(
                       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: primaryPink.withOpacity(0.9),
+                        color: primaryPink.withValues(alpha: 0.9),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
@@ -488,7 +537,10 @@ class _EventsScreenState extends State<EventsScreen> with TickerProviderStateMix
     );
   }
 
-  Widget _buildCalendarTab() {
+  Widget _buildCalendarTab(EventProvider eventProvider) {
+    final upcoming = _convertToEventList(eventProvider.events, 'upcoming');
+    final displayEvents = upcoming.isEmpty ? upcomingEvents : upcoming;
+    
     return SingleChildScrollView(
       padding: EdgeInsets.all(20),
       child: Column(
@@ -504,10 +556,10 @@ class _EventsScreenState extends State<EventsScreen> with TickerProviderStateMix
             ),
           ),
           SizedBox(height: 15),
-          ...upcomingEvents.take(2).map((event) => 
+          ...displayEvents.take(2).map((event) => 
             Container(
               margin: EdgeInsets.only(bottom: 10),
-              child: _buildEventCard(event, 'upcoming'),
+              child: _buildEventCard(event, 'upcoming', eventProvider),
             )
           ).toList(),
         ],

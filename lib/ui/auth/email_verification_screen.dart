@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:coursehub/utils/index.dart';
+import '../../utils/error_handler.dart';
+import '../../providers/auth_provider.dart';
 import '../onboarding/interest_selection_screen.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
@@ -12,8 +15,8 @@ class EmailVerificationScreen extends StatefulWidget {
 }
 
 class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
-  List<TextEditingController> _controllers = List.generate(6, (index) => TextEditingController());
-  List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
+  bool _isVerifying = false;
+  bool _isResending = false;
 
   @override
   Widget build(BuildContext context) {
@@ -63,70 +66,99 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 ),
               ),
               SizedBox(height: 40),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(6, (index) {
-                  return Container(
-                    width: 45,
-                    height: 55,
-                    child: TextFormField(
-                      controller: _controllers[index],
-                      focusNode: _focusNodes[index],
-                      textAlign: TextAlign.center,
-                      keyboardType: TextInputType.number,
-                      maxLength: 1,
-                      decoration: InputDecoration(
-                        counterText: '',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: lightPink),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: primaryPink, width: 2),
-                        ),
-                      ),
-                      onChanged: (value) {
-                        if (value.isNotEmpty && index < 5) {
-                          _focusNodes[index + 1].requestFocus();
-                        } else if (value.isEmpty && index > 0) {
-                          _focusNodes[index - 1].requestFocus();
-                        }
-                      },
-                    ),
-                  );
-                }),
-              ),
-              SizedBox(height: 40),
-              Container(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => InterestSelectionScreen()),
-                    );
-                  },
-                  child: Text('Verify', style: TextStyle(fontSize: 16)),
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 15),
-                  ),
-                ),
+              Icon(
+                Icons.mark_email_read,
+                size: 80,
+                color: primaryPink,
               ),
               SizedBox(height: 20),
-              TextButton(
-                onPressed: () {
-                  // Resend code
-                },
-                child: Text(
-                  'Didn\'t receive code? Resend',
-                  style: TextStyle(color: primaryPink),
+              Text(
+                'Check your email inbox for a verification link.',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: mediumGrey,
                 ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 40),
+              Consumer<AuthProvider>(
+                builder: (context, authProvider, child) {
+                  return Container(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isVerifying ? null : () => _checkVerification(authProvider),
+                      child: _isVerifying
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(white),
+                              ),
+                            )
+                          : Text('I\'ve Verified My Email', style: TextStyle(fontSize: 16)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryPink,
+                        padding: EdgeInsets.symmetric(vertical: 15),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              SizedBox(height: 20),
+              Consumer<AuthProvider>(
+                builder: (context, authProvider, child) {
+                  return TextButton(
+                    onPressed: _isResending ? null : () => _resendVerification(authProvider),
+                    child: _isResending
+                        ? Text('Sending...', style: TextStyle(color: primaryPink))
+                        : Text(
+                            'Didn\'t receive email? Resend',
+                            style: TextStyle(color: primaryPink),
+                          ),
+                  );
+                },
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _checkVerification(AuthProvider authProvider) async {
+    setState(() => _isVerifying = true);
+    try {
+      await authProvider.reloadUser();
+      if (authProvider.isEmailVerified) {
+        ErrorHandler.showSuccess(context, 'Email verified successfully!');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => InterestSelectionScreen()),
+        );
+      } else {
+        ErrorHandler.showError(
+          context,
+          'Email not verified yet. Please check your inbox and click the verification link.',
+          customMessage: 'Email not verified yet. Please check your inbox.',
+        );
+      }
+    } catch (e) {
+      ErrorHandler.showError(context, e);
+    } finally {
+      setState(() => _isVerifying = false);
+    }
+  }
+
+  Future<void> _resendVerification(AuthProvider authProvider) async {
+    setState(() => _isResending = true);
+    try {
+      await authProvider.sendEmailVerification();
+      ErrorHandler.showSuccess(context, 'Verification email sent! Check your inbox.');
+    } catch (e) {
+      ErrorHandler.showError(context, e);
+    } finally {
+      setState(() => _isResending = false);
+    }
   }
 }

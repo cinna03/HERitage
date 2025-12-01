@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:coursehub/utils/index.dart';
+import '../../utils/error_handler.dart';
+import '../../widgets/loading_overlay.dart';
 import '../../models/chat_room.dart';
 import 'chat_room_screen.dart';
 import 'mentors_screen.dart';
 import '../../providers/forum_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/chat_provider.dart';
 
 class CommunityScreen extends StatefulWidget {
   @override
@@ -36,7 +39,7 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
           controller: _tabController,
           indicatorColor: white,
           labelColor: white,
-          unselectedLabelColor: white.withOpacity(0.7),
+          unselectedLabelColor: white.withValues(alpha: 0.7),
           tabs: [
             Tab(text: 'Forums'),
             Tab(text: 'Chat Rooms'),
@@ -66,26 +69,28 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
     return Consumer<ForumProvider>(
       builder: (context, forumProvider, child) {
         if (forumProvider.isLoading && forumProvider.posts.isEmpty) {
-          return Center(child: CircularProgressIndicator());
+          return LoadingIndicator(message: 'Loading posts...');
+        }
+
+        if (forumProvider.error != null && forumProvider.posts.isEmpty) {
+          return EmptyState(
+            icon: Icons.error_outline,
+            title: 'Error loading posts',
+            message: forumProvider.error,
+            action: ElevatedButton(
+              onPressed: () {
+                // Retry loading
+              },
+              child: Text('Retry'),
+            ),
+          );
         }
 
         if (forumProvider.posts.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.forum, size: 64, color: mediumGrey),
-                SizedBox(height: 16),
-                Text(
-                  'No posts yet',
-                  style: TextStyle(fontSize: 18, color: mediumGrey),
-                ),
-                Text(
-                  'Be the first to start a discussion!',
-                  style: TextStyle(fontSize: 14, color: mediumGrey),
-                ),
-              ],
-            ),
+          return EmptyState(
+            icon: Icons.forum,
+            title: 'No posts yet',
+            message: 'Be the first to start a discussion!',
           );
         }
 
@@ -123,7 +128,7 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: lightPink.withOpacity(0.3),
+            color: lightPink.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: Offset(0, 5),
           ),
@@ -244,113 +249,6 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
     return 'Just now';
   }
 
-  Widget _buildForumPostCard(ForumPost post) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 20),
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: lightPink.withOpacity(0.3),
-            blurRadius: 10,
-            offset: Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: primaryPink,
-                child: Icon(Icons.person, color: white, size: 20),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      post.author,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: darkGrey,
-                      ),
-                    ),
-                    Text(
-                      post.timestamp,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: mediumGrey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuButton(
-                icon: Icon(Icons.more_vert, color: mediumGrey),
-                itemBuilder: (context) => [
-                  PopupMenuItem(child: Text('Report'), value: 'report'),
-                  PopupMenuItem(child: Text('Share'), value: 'share'),
-                ],
-              ),
-            ],
-          ),
-          SizedBox(height: 15),
-          Text(
-            post.title,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: darkGrey,
-            ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            post.content,
-            style: TextStyle(
-              fontSize: 14,
-              color: mediumGrey,
-              height: 1.4,
-            ),
-          ),
-          if (post.imageUrl != null) ...[
-            SizedBox(height: 15),
-            Container(
-              height: 150,
-              decoration: BoxDecoration(
-                color: lightGrey,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Center(
-                child: Icon(Icons.image, size: 40, color: mediumGrey),
-              ),
-            ),
-          ],
-          SizedBox(height: 15),
-          Row(
-            children: [
-              _buildInteractionButton(Icons.favorite_border, '${post.likes}', primaryPink),
-              SizedBox(width: 20),
-              _buildInteractionButton(Icons.comment_outlined, '${post.comments}', mediumGrey),
-              SizedBox(width: 20),
-              _buildInteractionButton(Icons.share_outlined, 'Share', mediumGrey),
-              Spacer(),
-              TextButton(
-                onPressed: () {},
-                child: Text('View Comments', style: TextStyle(color: primaryPink)),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildInteractionButton(IconData icon, String label, Color color) {
     return InkWell(
@@ -372,25 +270,47 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
   }
 
   Widget _buildChatRoomsTab() {
-    final chatRooms = [
-      ChatRoom('Digital Art Beginners', 'Share your first creations and get feedback', 45, true),
-      ChatRoom('Music Production Hub', 'Collaborate and share beats', 32, false),
-      ChatRoom('Photography Tips', 'Daily challenges and critiques', 67, true),
-      ChatRoom('Design Inspiration', 'Mood boards and creative ideas', 28, false),
-      ChatRoom('Freelance Success', 'Business tips and client stories', 89, true),
-      ChatRoom('African Art Heritage', 'Celebrating our cultural roots', 156, false),
-    ];
+    return Consumer<ChatProvider>(
+      builder: (context, chatProvider, child) {
+        if (chatProvider.isLoading && chatProvider.chatRooms.isEmpty) {
+          return LoadingIndicator(message: 'Loading chat rooms...');
+        }
 
-    return ListView.builder(
-      padding: EdgeInsets.all(20),
-      itemCount: chatRooms.length,
-      itemBuilder: (context, index) {
-        return _buildChatRoomCard(chatRooms[index]);
+        if (chatProvider.error != null && chatProvider.chatRooms.isEmpty) {
+          return EmptyState(
+            icon: Icons.error_outline,
+            title: 'Error loading chat rooms',
+            message: chatProvider.error,
+          );
+        }
+
+        if (chatProvider.chatRooms.isEmpty) {
+          return EmptyState(
+            icon: Icons.chat_bubble_outline,
+            title: 'No chat rooms yet',
+            message: 'Create a chat room to start connecting!',
+          );
+        }
+
+        return ListView.builder(
+          padding: EdgeInsets.all(20),
+          itemCount: chatProvider.chatRooms.length,
+          itemBuilder: (context, index) {
+            final roomData = chatProvider.chatRooms[index];
+            final room = ChatRoom(
+              roomData['name'] ?? 'Unnamed Room',
+              roomData['description'] ?? '',
+              (roomData['memberCount'] ?? 0) as int,
+              roomData['isActive'] ?? false,
+            );
+            return _buildChatRoomCard(room, roomData['id'] as String?);
+          },
+        );
       },
     );
   }
 
-  Widget _buildChatRoomCard(ChatRoom room) {
+  Widget _buildChatRoomCard(ChatRoom room, String? roomId) {
     return Container(
       margin: EdgeInsets.only(bottom: 15),
       decoration: BoxDecoration(
@@ -398,7 +318,7 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: lightPink.withOpacity(0.3),
+            color: lightPink.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: Offset(0, 5),
           ),
@@ -410,7 +330,7 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
           width: 50,
           height: 50,
           decoration: BoxDecoration(
-            color: primaryPink.withOpacity(0.1),
+            color: primaryPink.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(Icons.chat, color: primaryPink),
@@ -465,7 +385,10 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ChatRoomScreen(chatRoom: room),
+              builder: (context) => ChatRoomScreen(
+                chatRoom: room,
+                chatRoomId: roomId,
+              ),
             ),
           );
         },
@@ -527,14 +450,12 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
                   
                   _titleController.clear();
                   _contentController.clear();
+                  _titleController.clear();
+                  _contentController.clear();
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Post created successfully!')),
-                  );
+                  ErrorHandler.showSuccess(context, 'Post created successfully!');
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to create post: ${e.toString()}')),
-                  );
+                  ErrorHandler.showError(context, e);
                 }
               }
             },

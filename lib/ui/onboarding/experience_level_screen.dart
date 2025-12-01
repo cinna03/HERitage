@@ -107,7 +107,7 @@ class _ExperienceLevelScreenState extends State<ExperienceLevelScreen> {
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: lightPink.withOpacity(0.3),
+                                color: lightPink.withValues(alpha: 0.3),
                                 blurRadius: 10,
                                 offset: Offset(0, 5),
                               ),
@@ -119,7 +119,7 @@ class _ExperienceLevelScreenState extends State<ExperienceLevelScreen> {
                                 width: 60,
                                 height: 60,
                                 decoration: BoxDecoration(
-                                  color: isSelected ? white : primaryPink.withOpacity(0.1),
+                                  color: isSelected ? white : primaryPink.withValues(alpha: 0.1),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(
@@ -146,7 +146,7 @@ class _ExperienceLevelScreenState extends State<ExperienceLevelScreen> {
                                       level.description,
                                       style: TextStyle(
                                         fontSize: 14,
-                                        color: isSelected ? white.withOpacity(0.9) : mediumGrey,
+                                        color: isSelected ? white.withValues(alpha: 0.9) : mediumGrey,
                                       ),
                                     ),
                                     SizedBox(height: 3),
@@ -154,7 +154,7 @@ class _ExperienceLevelScreenState extends State<ExperienceLevelScreen> {
                                       level.subtitle,
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: isSelected ? white.withOpacity(0.7) : mediumGrey,
+                                        color: isSelected ? white.withValues(alpha: 0.7) : mediumGrey,
                                       ),
                                     ),
                                   ],

@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:coursehub/utils/index.dart';
+import '../../utils/error_handler.dart';
+import '../../widgets/loading_overlay.dart';
 import '../../models/chat_room.dart';
+import '../../providers/chat_provider.dart';
 
 class ChatRoomScreen extends StatefulWidget {
   final ChatRoom chatRoom;
+  final String? chatRoomId; // Firestore document ID
 
-  ChatRoomScreen({required this.chatRoom});
+  ChatRoomScreen({required this.chatRoom, this.chatRoomId});
 
   @override
   _ChatRoomScreenState createState() => _ChatRoomScreenState();
@@ -14,15 +21,27 @@ class ChatRoomScreen extends StatefulWidget {
 class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  late String _roomId;
 
-  List<ChatMessage> messages = [
-    ChatMessage('Sarah M.', 'Hey everyone! Just joined this room 👋', '10:30 AM', false),
-    ChatMessage('Amina K.', 'Welcome Sarah! We\'re glad to have you here', '10:32 AM', false),
-    ChatMessage('Grace O.', 'I just uploaded my latest painting to the gallery. Would love some feedback!', '10:45 AM', false),
-    ChatMessage('You', 'That sounds amazing Grace! Can\'t wait to see it', '10:47 AM', true),
-    ChatMessage('Fatima A.', 'Has anyone tried the new brush techniques from yesterday\'s workshop?', '11:15 AM', false),
-    ChatMessage('Sarah M.', 'Yes! They\'re game-changing. My blending has improved so much', '11:18 AM', false),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _roomId = widget.chatRoomId ?? 'default-room';
+    // Load messages when screen opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+      chatProvider.loadMessages(_roomId);
+    });
+  }
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    _scrollController.dispose();
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    chatProvider.clearMessages();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +57,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             ),
             Text(
               '${widget.chatRoom.memberCount} members',
-              style: TextStyle(fontSize: 12, color: white.withOpacity(0.8)),
+              style: TextStyle(fontSize: 12, color: white.withValues(alpha: 0.8)),
             ),
           ],
         ),
@@ -51,27 +70,55 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: EdgeInsets.all(15),
-              itemCount: messages.length,
-              itemBuilder: (context, index) {
-                return _buildMessageBubble(messages[index]);
-              },
-            ),
-          ),
-          _buildMessageInput(),
-        ],
+      body: Consumer<ChatProvider>(
+        builder: (context, chatProvider, child) {
+          if (chatProvider.isLoading && chatProvider.messages.isEmpty) {
+            return LoadingIndicator(message: 'Loading messages...');
+          }
+
+          if (chatProvider.error != null && chatProvider.messages.isEmpty) {
+            return EmptyState(
+              icon: Icons.error_outline,
+              title: 'Error loading messages',
+              message: chatProvider.error,
+              action: ElevatedButton(
+                onPressed: () {
+                  chatProvider.loadMessages(_roomId);
+                },
+                child: Text('Retry'),
+              ),
+            );
+          }
+
+          return Column(
+            children: [
+              Expanded(
+                child: ListView.builder(
+                  controller: _scrollController,
+                  padding: EdgeInsets.all(15),
+                  itemCount: chatProvider.messages.length,
+                  itemBuilder: (context, index) {
+                    final message = chatProvider.messages[index];
+                    return _buildMessageBubbleFromMap(message);
+                  },
+                ),
+              ),
+              _buildMessageInput(chatProvider),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildMessageBubble(ChatMessage message) {
-    final isMe = message.isMe;
-    
+  Widget _buildMessageBubbleFromMap(Map<String, dynamic> message) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final senderId = message['senderId'] as String?;
+    final isMe = currentUser != null && senderId == currentUser.uid;
+    final senderName = message['senderName'] ?? 'Anonymous';
+    final text = message['text'] ?? '';
+    final timestamp = _formatTimestamp(message['timestamp']);
+
     return Container(
       margin: EdgeInsets.only(bottom: 15),
       child: Row(
@@ -102,7 +149,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: lightPink.withOpacity(0.3),
+                    color: lightPink.withValues(alpha: 0.3),
                     blurRadius: 5,
                     offset: Offset(0, 2),
                   ),
@@ -113,7 +160,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 children: [
                   if (!isMe)
                     Text(
-                      message.sender,
+                      senderName,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -122,7 +169,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     ),
                   if (!isMe) SizedBox(height: 4),
                   Text(
-                    message.content,
+                    text,
                     style: TextStyle(
                       fontSize: 14,
                       color: isMe ? white : darkGrey,
@@ -130,10 +177,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    message.timestamp,
+                    timestamp,
                     style: TextStyle(
                       fontSize: 10,
-                      color: isMe ? white.withOpacity(0.7) : mediumGrey,
+                      color: isMe ? white.withValues(alpha: 0.7) : mediumGrey,
                     ),
                   ),
                 ],
@@ -153,14 +200,36 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     );
   }
 
-  Widget _buildMessageInput() {
+  String _formatTimestamp(dynamic timestamp) {
+    if (timestamp == null) return 'Just now';
+    if (timestamp is Timestamp) {
+      final dateTime = timestamp.toDate();
+      final now = DateTime.now();
+      final difference = now.difference(dateTime);
+      
+      if (difference.inMinutes < 1) return 'Just now';
+      if (difference.inMinutes < 60) return '${difference.inMinutes}m ago';
+      if (difference.inHours < 24) return '${difference.inHours}h ago';
+      
+      // Format time
+      final hour = dateTime.hour;
+      final minute = dateTime.minute.toString().padLeft(2, '0');
+      final period = hour >= 12 ? 'PM' : 'AM';
+      final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+      return '$displayHour:$minute $period';
+    }
+    return 'Just now';
+  }
+
+
+  Widget _buildMessageInput(ChatProvider chatProvider) {
     return Container(
       padding: EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: white,
         boxShadow: [
           BoxShadow(
-            color: lightPink.withOpacity(0.3),
+            color: lightPink.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: Offset(0, -5),
           ),
@@ -178,7 +247,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             Expanded(
               child: TextField(
                 controller: _messageController,
-                onSubmitted: (_) => _sendMessage(),
+                onSubmitted: (_) => _sendMessage(chatProvider),
                 decoration: InputDecoration(
                   hintText: 'Type a message...',
                   border: OutlineInputBorder(
@@ -200,10 +269,22 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 color: primaryPink,
                 shape: BoxShape.circle,
               ),
-              child: IconButton(
-                onPressed: _sendMessage,
-                icon: Icon(Icons.send, color: white),
-              ),
+              child: chatProvider.isLoading
+                  ? Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(white),
+                        ),
+                      ),
+                    )
+                  : IconButton(
+                      onPressed: () => _sendMessage(chatProvider),
+                      icon: Icon(Icons.send, color: white),
+                    ),
             ),
           ],
         ),
@@ -211,28 +292,25 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     );
   }
 
-  void _sendMessage() {
+  Future<void> _sendMessage(ChatProvider chatProvider) async {
     if (_messageController.text.trim().isNotEmpty) {
-      setState(() {
-        messages.add(
-          ChatMessage(
-            'You',
-            _messageController.text.trim(),
-            '${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
-            true,
-          ),
-        );
+      try {
+        await chatProvider.sendMessage(_roomId, _messageController.text.trim());
         _messageController.clear();
-      });
-      
-      // Scroll to bottom
-      Future.delayed(Duration(milliseconds: 100), () {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      });
+        
+        // Scroll to bottom after message is sent
+        Future.delayed(Duration(milliseconds: 300), () {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      } catch (e) {
+        ErrorHandler.showError(context, e);
+      }
     }
   }
 

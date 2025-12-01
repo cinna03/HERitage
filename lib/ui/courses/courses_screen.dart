@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:coursehub/utils/index.dart';
+import '../../widgets/loading_overlay.dart';
+import '../../providers/course_provider.dart';
 import '../../models/course.dart';
 import 'course_detail_screen.dart';
 
@@ -105,24 +108,65 @@ class _CoursesScreenState extends State<CoursesScreen> {
   }
 
   Widget _buildCoursesList() {
-    final filteredCourses = courses.where((course) {
-      final matchesCategory = selectedCategory == 'All' || course.category == selectedCategory;
-      final matchesSearch = course.title.toLowerCase().contains(searchQuery.toLowerCase()) ||
-                           course.description.toLowerCase().contains(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
-    }).toList();
+    return Consumer<CourseProvider>(
+      builder: (context, courseProvider, child) {
+        // Use Firestore courses if available, otherwise use local courses
+        final availableCourses = courseProvider.courses.isNotEmpty 
+            ? courseProvider.courses 
+            : courses.map((c) => {
+                'title': c.title,
+                'description': c.description,
+                'category': c.category,
+                'rating': c.rating,
+                'students': c.students,
+                'level': c.level,
+              }).toList();
 
-    return ListView.builder(
-      padding: EdgeInsets.all(20),
-      itemCount: filteredCourses.length,
-      itemBuilder: (context, index) {
-        final course = filteredCourses[index];
-        return _buildCourseCard(course);
+        final filteredCourses = availableCourses.where((course) {
+          final title = course['title'] ?? '';
+          final desc = course['description'] ?? '';
+          final cat = course['category'] ?? '';
+          final matchesCategory = selectedCategory == 'All' || cat == selectedCategory;
+          final matchesSearch = title.toString().toLowerCase().contains(searchQuery.toLowerCase()) ||
+                               desc.toString().toLowerCase().contains(searchQuery.toLowerCase());
+          return matchesCategory && matchesSearch;
+        }).toList();
+
+        if (courseProvider.isLoading && filteredCourses.isEmpty) {
+          return LoadingIndicator(message: 'Loading courses...');
+        }
+
+        if (filteredCourses.isEmpty) {
+          return EmptyState(
+            icon: Icons.school,
+            title: 'No courses found',
+            message: searchQuery.isNotEmpty 
+                ? 'Try a different search term'
+                : 'No courses available in this category',
+          );
+        }
+
+        return ListView.builder(
+          padding: EdgeInsets.all(20),
+          itemCount: filteredCourses.length,
+          itemBuilder: (context, index) {
+            final courseData = filteredCourses[index];
+            final course = Course(
+              courseData['title']?.toString() ?? 'Untitled',
+              courseData['description']?.toString() ?? '',
+              courseData['category']?.toString() ?? 'General',
+              (courseData['rating'] as num?)?.toDouble() ?? 0.0,
+              (courseData['students'] as num?)?.toInt() ?? 0,
+              courseData['level']?.toString() ?? 'Beginner',
+            );
+            return _buildCourseCard(course, courseData['id']?.toString());
+          },
+        );
       },
     );
   }
 
-  Widget _buildCourseCard(Course course) {
+  Widget _buildCourseCard(Course course, String? courseId) {
     return Container(
       margin: EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
@@ -130,7 +174,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: lightPink.withOpacity(0.3),
+            color: lightPink.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: Offset(0, 5),
           ),
@@ -141,7 +185,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => CourseDetailScreen(course: course),
+              builder: (context) => CourseDetailScreen(
+                course: course,
+                courseId: courseId,
+              ),
             ),
           );
         },
@@ -152,7 +199,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
             Container(
               height: 150,
               decoration: BoxDecoration(
-                color: primaryPink.withOpacity(0.1),
+                color: primaryPink.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
               ),
               child: Center(
@@ -183,7 +230,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       Container(
                         padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: primaryPink.withOpacity(0.1),
+                          color: primaryPink.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(

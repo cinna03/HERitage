@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -10,6 +11,7 @@ class EventProvider extends ChangeNotifier {
   Map<String, dynamic>? _currentEvent;
   bool _isLoading = false;
   String? _error;
+  StreamSubscription<QuerySnapshot>? _eventsSubscription;
 
   List<Map<String, dynamic>> get events => _events;
   Map<String, dynamic>? get currentEvent => _currentEvent;
@@ -20,8 +22,10 @@ class EventProvider extends ChangeNotifier {
     _loadEvents();
   }
 
+  /// Loads events from Firestore with real-time updates
   void _loadEvents() {
-    _firestoreService.getEvents().listen((snapshot) {
+    _eventsSubscription?.cancel();
+    _eventsSubscription = _firestoreService.getEvents().listen((snapshot) {
       _events = snapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
         return {
@@ -37,13 +41,20 @@ class EventProvider extends ChangeNotifier {
     });
   }
 
+  @override
+  void dispose() {
+    _eventsSubscription?.cancel();
+    super.dispose();
+  }
+
+  /// Loads a specific event by ID
   Future<void> loadEvent(String eventId) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final eventDoc = await FirebaseFirestore.instance.collection('events').doc(eventId).get();
+      final eventDoc = await _firestoreService.getEvent(eventId);
       if (eventDoc.exists) {
         _currentEvent = {
           'id': eventDoc.id,
@@ -59,6 +70,8 @@ class EventProvider extends ChangeNotifier {
     }
   }
 
+  /// RSVPs the current user to an event
+  /// Adds user to attendees list
   Future<void> rsvpEvent(String eventId) async {
     _isLoading = true;
     _error = null;
@@ -82,6 +95,8 @@ class EventProvider extends ChangeNotifier {
     }
   }
 
+  /// Cancels the current user's RSVP for an event
+  /// Removes user from attendees list
   Future<void> cancelRSVP(String eventId) async {
     _isLoading = true;
     _error = null;
@@ -105,6 +120,7 @@ class EventProvider extends ChangeNotifier {
     }
   }
 
+  /// Checks if the current user has RSVPed to an event
   Future<bool> isUserRSVPed(String eventId) async {
     try {
       final user = _auth.currentUser;
@@ -115,6 +131,9 @@ class EventProvider extends ChangeNotifier {
     }
   }
 
+  /// Creates a new event
+  /// Requires user authentication
+  /// Automatically sets userId and initializes attendees list
   Future<void> createEvent(Map<String, dynamic> eventData) async {
     _isLoading = true;
     _error = null;
@@ -126,7 +145,7 @@ class EventProvider extends ChangeNotifier {
         throw Exception('User must be authenticated to create events');
       }
 
-      eventData['creatorId'] = user.uid;
+      eventData['userId'] = user.uid; // Standardized field name for user ID
       eventData['createdAt'] = FieldValue.serverTimestamp();
       eventData['attendees'] = [];
       

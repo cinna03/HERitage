@@ -152,7 +152,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             slide.description,
             style: TextStyle(
               fontSize: 16,
-              color: Theme.of(context).brightness == Brightness.dark ? white.withOpacity(0.8) : mediumGrey,
+              color: Theme.of(context).brightness == Brightness.dark ? white.withValues(alpha: 0.8) : mediumGrey,
               height: 1.5,
             ),
             textAlign: TextAlign.center,

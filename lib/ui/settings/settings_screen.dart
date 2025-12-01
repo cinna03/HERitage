@@ -12,6 +12,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
   String _selectedLanguage = 'en';
+  bool _autoPlayVideos = true;
 
   @override
   void initState() {
@@ -22,10 +23,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _loadPreferences() async {
     final notifications = await PreferencesService.getNotificationsEnabled();
     final language = await PreferencesService.getLanguage();
+    final autoPlay = await PreferencesService.getAutoPlayVideos();
     
     setState(() {
       _notificationsEnabled = notifications;
       _selectedLanguage = language;
+      _autoPlayVideos = autoPlay;
     });
   }
 
@@ -84,6 +87,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
           ),
+          SizedBox(height: 15),
+          _buildSettingCard(
+            'Auto-play Videos',
+            'Automatically play course videos',
+            Switch(
+              value: _autoPlayVideos,
+              onChanged: (value) async {
+                setState(() => _autoPlayVideos = value);
+                await PreferencesService.setAutoPlayVideos(value);
+              },
+              activeTrackColor: primaryPink,
+            ),
+          ),
         ],
       ),
     );
@@ -97,7 +113,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: lightPink.withOpacity(0.3),
+            color: lightPink.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: Offset(0, 5),
           ),
