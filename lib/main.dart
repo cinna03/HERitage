@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:coursehub/utils/index.dart';
 import 'package:coursehub/utils/theme_provider.dart';
 import 'package:coursehub/ui/splash_screen.dart';
@@ -18,6 +19,15 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  
+  // Enable Firestore offline persistence
+  try {
+    await FirebaseFirestore.instance.enablePersistence();
+  } catch (e) {
+    // Persistence may already be enabled or not supported on this platform
+    print('Firestore persistence: $e');
+  }
+  
   runApp(HERmonyApp());
 }
 

@@ -20,11 +20,24 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
   late TabController _tabController;
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -43,16 +56,27 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
         ),
         backgroundColor: primaryPink,
         elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: white,
-          labelColor: white,
-          unselectedLabelColor: white.withValues(alpha: 0.7),
-          tabs: [
-            Tab(text: 'Forums'),
-            Tab(text: 'Chat Rooms'),
-            Tab(text: 'Mentors'),
-          ],
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(_tabController.index == 0 ? 100 : 50),
+          child: Column(
+            children: [
+              if (_tabController.index == 0) _buildSearchBar(),
+              TabBar(
+                controller: _tabController,
+                indicatorColor: white,
+                labelColor: white,
+                unselectedLabelColor: white.withValues(alpha: 0.7),
+                tabs: [
+                  Tab(text: 'Forums'),
+                  Tab(text: 'Chat Rooms'),
+                  Tab(text: 'Mentors'),
+                ],
+                onTap: (index) {
+                  setState(() {});
+                },
+              ),
+            ],
+          ),
         ),
       ),
       body: TabBarView(
@@ -69,6 +93,38 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
         },
         backgroundColor: primaryPink,
         child: Icon(Icons.add, color: white),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    final theme = Theme.of(context);
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: primaryPink,
+      child: TextField(
+        controller: _searchController,
+        style: TextStyle(color: white),
+        decoration: InputDecoration(
+          hintText: 'Search posts...',
+          hintStyle: TextStyle(color: white.withValues(alpha: 0.7)),
+          prefixIcon: Icon(Icons.search, color: white),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: Icon(Icons.clear, color: white),
+                  onPressed: () {
+                    _searchController.clear();
+                  },
+                )
+              : null,
+          filled: true,
+          fillColor: white.withValues(alpha: 0.2),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(25),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        ),
       ),
     );
   }
@@ -94,11 +150,25 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
           );
         }
 
-        if (forumProvider.posts.isEmpty) {
+        // Filter posts based on search query
+        final filteredPosts = _searchQuery.isEmpty
+            ? forumProvider.posts
+            : forumProvider.posts.where((post) {
+                final title = (post['title'] ?? '').toString().toLowerCase();
+                final content = (post['content'] ?? '').toString().toLowerCase();
+                final author = (post['author'] ?? '').toString().toLowerCase();
+                return title.contains(_searchQuery) ||
+                    content.contains(_searchQuery) ||
+                    author.contains(_searchQuery);
+              }).toList();
+
+        if (filteredPosts.isEmpty) {
           return EmptyState(
-            icon: Icons.forum,
-            title: 'No posts yet',
-            message: 'Be the first to start a discussion!',
+            icon: _searchQuery.isNotEmpty ? Icons.search_off : Icons.forum,
+            title: _searchQuery.isNotEmpty ? 'No posts found' : 'No posts yet',
+            message: _searchQuery.isNotEmpty
+                ? 'Try a different search term'
+                : 'Be the first to start a discussion!',
           );
         }
 
@@ -106,9 +176,9 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
           color: Theme.of(context).scaffoldBackgroundColor,
           child: ListView.builder(
             padding: EdgeInsets.all(20),
-            itemCount: forumProvider.posts.length,
+            itemCount: filteredPosts.length,
             itemBuilder: (context, index) {
-              final post = forumProvider.posts[index];
+              final post = filteredPosts[index];
               return _buildForumPostCardFromMap(post);
             },
           ),

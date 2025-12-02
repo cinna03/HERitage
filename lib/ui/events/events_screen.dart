@@ -15,15 +15,25 @@ class EventsScreen extends StatefulWidget {
 
 class _EventsScreenState extends State<EventsScreen> with TickerProviderStateMixin {
   late TabController _tabController;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  String? _selectedEventType;
+  String? _selectedLocation;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase();
+      });
+    });
   }
 
   @override
   void dispose() {
+    _searchController.dispose();
     _tabController.dispose();
     super.dispose();
   }
@@ -41,7 +51,7 @@ class _EventsScreenState extends State<EventsScreen> with TickerProviderStateMix
       if (filter == 'past' && dateTime.isAfter(now)) return null;
 
       final attendees = data['attendees'] as List<dynamic>? ?? [];
-      return Event(
+      final event = Event(
         data['title'] ?? 'Untitled Event',
         data['description'] ?? '',
         dateTime,
@@ -51,6 +61,37 @@ class _EventsScreenState extends State<EventsScreen> with TickerProviderStateMix
         false, // Will be updated based on user RSVP
         data['location'] ?? 'Online',
       );
+
+      // Apply search filter
+      if (_searchQuery.isNotEmpty) {
+        final title = event.title.toLowerCase();
+        final description = event.description.toLowerCase();
+        final host = event.host.toLowerCase();
+        final location = event.location.toLowerCase();
+        if (!title.contains(_searchQuery) &&
+            !description.contains(_searchQuery) &&
+            !host.contains(_searchQuery) &&
+            !location.contains(_searchQuery)) {
+          return null;
+        }
+      }
+
+      // Apply type filter
+      if (_selectedEventType != null && _selectedEventType != 'All' && event.type != _selectedEventType) {
+        return null;
+      }
+
+      // Apply location filter
+      if (_selectedLocation != null && _selectedLocation != 'All') {
+        if (_selectedLocation == 'Online' && event.location.toLowerCase() != 'online') {
+          return null;
+        }
+        if (_selectedLocation == 'In-Person' && event.location.toLowerCase() == 'online') {
+          return null;
+        }
+      }
+
+      return event;
     }).whereType<Event>().toList();
   }
 
@@ -149,17 +190,32 @@ class _EventsScreenState extends State<EventsScreen> with TickerProviderStateMix
         ),
         backgroundColor: primaryPink,
         elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: white,
-          labelColor: white,
-          unselectedLabelColor: white.withValues(alpha: 0.7),
-          tabs: [
-            Tab(text: 'Calendar'),
-            Tab(text: 'Upcoming'),
-            Tab(text: 'Live'),
-            Tab(text: 'Past'),
-          ],
+        actions: [
+          IconButton(
+            icon: Icon(Icons.filter_list, color: white),
+            onPressed: () => _showFilterDialog(),
+            tooltip: 'Filter events',
+          ),
+        ],
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(100),
+          child: Column(
+            children: [
+              _buildSearchBar(),
+              TabBar(
+                controller: _tabController,
+                indicatorColor: white,
+                labelColor: white,
+                unselectedLabelColor: white.withValues(alpha: 0.7),
+                tabs: [
+                  Tab(text: 'Calendar'),
+                  Tab(text: 'Upcoming'),
+                  Tab(text: 'Live'),
+                  Tab(text: 'Past'),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
       body: Consumer<EventProvider>(
@@ -200,18 +256,121 @@ class _EventsScreenState extends State<EventsScreen> with TickerProviderStateMix
     );
   }
 
+  Widget _buildSearchBar() {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: primaryPink,
+      child: TextField(
+        controller: _searchController,
+        style: TextStyle(color: white),
+        decoration: InputDecoration(
+          hintText: 'Search events...',
+          hintStyle: TextStyle(color: white.withValues(alpha: 0.7)),
+          prefixIcon: Icon(Icons.search, color: white),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: Icon(Icons.clear, color: white),
+                  onPressed: () {
+                    _searchController.clear();
+                  },
+                )
+              : null,
+          filled: true,
+          fillColor: white.withValues(alpha: 0.2),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(25),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        ),
+      ),
+    );
+  }
+
+  void _showFilterDialog() {
+    final theme = Theme.of(context);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Filter Events'),
+        backgroundColor: theme.cardColor,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Event Type', style: theme.textTheme.titleMedium),
+            SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: ['All', 'Workshop', 'Exhibition', 'Conference', 'Bootcamp', 'Live Session']
+                  .map((type) => FilterChip(
+                        label: Text(type),
+                        selected: _selectedEventType == type,
+                        onSelected: (selected) {
+                          setState(() {
+                            _selectedEventType = selected ? type : null;
+                          });
+                          Navigator.pop(context);
+                        },
+                      ))
+                  .toList(),
+            ),
+            SizedBox(height: 16),
+            Text('Location', style: theme.textTheme.titleMedium),
+            SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: ['All', 'Online', 'In-Person']
+                  .map((location) => FilterChip(
+                        label: Text(location),
+                        selected: _selectedLocation == location,
+                        onSelected: (selected) {
+                          setState(() {
+                            _selectedLocation = selected ? location : null;
+                          });
+                          Navigator.pop(context);
+                        },
+                      ))
+                  .toList(),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _selectedEventType = null;
+                _selectedLocation = null;
+              });
+              Navigator.pop(context);
+            },
+            child: Text('Clear Filters'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEventsList(List<Event> events, String type, EventProvider? eventProvider) {
     if (events.isEmpty) {
       return EmptyState(
         icon: type == 'live' ? Icons.live_tv : Icons.event,
-        title: type == 'live' 
-            ? 'No live events right now'
-            : type == 'upcoming'
-                ? 'No upcoming events'
-                : 'No past events',
-        message: type == 'upcoming' 
-            ? 'Check back later for new events'
-            : null,
+        title: _searchQuery.isNotEmpty || _selectedEventType != null || _selectedLocation != null
+            ? 'No events match your filters'
+            : type == 'live' 
+                ? 'No live events right now'
+                : type == 'upcoming'
+                    ? 'No upcoming events'
+                    : 'No past events',
+        message: _searchQuery.isNotEmpty || _selectedEventType != null || _selectedLocation != null
+            ? 'Try adjusting your search or filters'
+            : type == 'upcoming' 
+                ? 'Check back later for new events'
+                : null,
       );
     }
 
