@@ -17,6 +17,7 @@ dependencies:
   shared_preferences: ^2.3.2
   modal_progress_hud_nsn: ^0.5.1
   image_picker: ^1.0.7
+  share_plus: ^10.1.2
 
   # responsive ui test
   device_preview: ^1.1.0

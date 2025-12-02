@@ -14,8 +14,11 @@ class FirestoreService {
   }
 
   /// Gets all posts ordered by timestamp (newest first) as a real-time stream
+  /// Uses cache-first approach: loads from cache immediately, then syncs with server
   Stream<QuerySnapshot> getPosts() {
-    return _db.collection('posts').orderBy('timestamp', descending: true).snapshots();
+    return _db.collection('posts')
+        .orderBy('timestamp', descending: true)
+        .snapshots(includeMetadataChanges: false);
   }
 
   /// Updates a post with new data
@@ -51,6 +54,29 @@ class FirestoreService {
   /// [data] contains the fields to update
   Future<void> updateUserProfile(String userId, Map<String, dynamic> data) async {
     await _db.collection('users').doc(userId).update(data);
+  }
+
+  /// Searches for users by username
+  /// Returns a stream of users matching the search query
+  /// Note: This uses a simple query without range filters to avoid index requirements
+  /// Filtering is done in memory for case-insensitive matching
+  Stream<QuerySnapshot> searchUsers(String query) {
+    if (query.isEmpty) {
+      // Return empty stream if query is empty
+      return _db.collection('users').limit(0).snapshots();
+    }
+    
+    // Get all users and filter in memory (avoids index requirement)
+    // This is more reliable than range queries which need indexes
+    return _db.collection('users')
+        .limit(100) // Get up to 100 users and filter in memory
+        .snapshots();
+  }
+
+  /// Gets all users (for search functionality)
+  /// Returns a stream of all users
+  Stream<QuerySnapshot> getAllUsers() {
+    return _db.collection('users').limit(50).snapshots();
   }
 
   // ==================== Events CRUD ====================
@@ -114,6 +140,67 @@ class FirestoreService {
 
   Stream<QuerySnapshot> getChatRooms() {
     return _db.collection('chatRooms').orderBy('createdAt', descending: true).snapshots();
+  }
+
+  // ==================== Direct Messages CRUD ====================
+  
+  /// Gets or creates a conversation ID between two users
+  /// Returns a conversation ID that can be used for messaging
+  Future<String> getOrCreateConversation(String userId1, String userId2) async {
+    // Sort user IDs to ensure consistent conversation ID
+    final sortedIds = [userId1, userId2]..sort();
+    final conversationId = '${sortedIds[0]}_${sortedIds[1]}';
+    
+    // Check if conversation exists
+    final conversationDoc = await _db.collection('conversations').doc(conversationId).get();
+    
+    if (!conversationDoc.exists) {
+      // Create new conversation with a default timestamp (not null) so queries work
+      final now = DateTime.now();
+      await _db.collection('conversations').doc(conversationId).set({
+        'participants': [userId1, userId2],
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastMessage': null,
+        'lastMessageTime': Timestamp.fromDate(now), // Use current time instead of null
+      });
+    }
+    
+    return conversationId;
+  }
+
+  /// Sends a direct message between two users
+  /// [conversationId] is the conversation ID (from getOrCreateConversation)
+  /// [messageData] contains: text, senderId, senderName, timestamp
+  Future<void> sendDirectMessage(String conversationId, Map<String, dynamic> messageData) async {
+    // Add message to conversation
+    await _db.collection('conversations').doc(conversationId)
+        .collection('messages').add(messageData);
+    
+    // Update conversation last message
+    await _db.collection('conversations').doc(conversationId).update({
+      'lastMessage': messageData['text'],
+      'lastMessageTime': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Gets messages for a conversation as a real-time stream
+  /// [conversationId] is the conversation ID
+  Stream<QuerySnapshot> getDirectMessages(String conversationId) {
+    return _db.collection('conversations').doc(conversationId)
+        .collection('messages')
+        .orderBy('timestamp', descending: false)
+        .snapshots();
+  }
+
+  /// Gets all conversations for a user
+  /// Uses cache-first approach: loads from cache immediately, then syncs with server
+  /// Note: Sorting is done in memory to avoid index requirements
+  /// [userId] is the current user's ID
+  Stream<QuerySnapshot> getUserConversations(String userId) {
+    // Query without orderBy to avoid index requirement - sorting done in UI
+    return _db.collection('conversations')
+        .where('participants', arrayContains: userId)
+        .snapshots(includeMetadataChanges: false);
   }
 
   // ==================== Course Progress CRUD ====================
@@ -218,5 +305,20 @@ class FirestoreService {
   /// Creates a certificate for a user after course completion
   Future<void> createCertificate(String userId, Map<String, dynamic> certificateData) async {
     await _db.collection('users').doc(userId).collection('certificates').add(certificateData);
+  }
+
+  // ==================== Notifications ====================
+  
+  /// Creates a notification for a user
+  Future<void> createNotification(String userId, Map<String, dynamic> notificationData) async {
+    await _db.collection('users').doc(userId).collection('notifications').add(notificationData);
+  }
+
+  /// Gets notifications for a user as a stream
+  Stream<QuerySnapshot> getUserNotifications(String userId) {
+    return _db.collection('users').doc(userId).collection('notifications')
+        .orderBy('timestamp', descending: true)
+        .limit(50)
+        .snapshots();
   }
 }

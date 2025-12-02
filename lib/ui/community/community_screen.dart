@@ -4,29 +4,27 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:coursehub/utils/index.dart';
 import '../../utils/error_handler.dart';
 import '../../widgets/loading_overlay.dart';
-import '../../models/chat_room.dart';
-import 'chat_room_screen.dart';
-import 'mentors_screen.dart';
+import '../../services/firestore_service.dart';
+import 'post_comments_screen.dart';
 import '../../providers/forum_provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/chat_provider.dart';
+import '../messaging/messaging_screen.dart';
 
 class CommunityScreen extends StatefulWidget {
   @override
   _CommunityScreenState createState() => _CommunityScreenState();
 }
 
-class _CommunityScreenState extends State<CommunityScreen> with TickerProviderStateMixin {
-  late TabController _tabController;
+class _CommunityScreenState extends State<CommunityScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
+  final FirestoreService _firestoreService = FirestoreService();
   String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.toLowerCase();
@@ -37,6 +35,8 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
   @override
   void dispose() {
     _searchController.dispose();
+    _titleController.dispose();
+    _contentController.dispose();
     super.dispose();
   }
 
@@ -48,7 +48,7 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
-          'Community',
+          'Community Forums',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontFamily: 'Lato',
@@ -57,36 +57,11 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
         backgroundColor: primaryPink,
         elevation: 0,
         bottom: PreferredSize(
-          preferredSize: Size.fromHeight(_tabController.index == 0 ? 100 : 50),
-          child: Column(
-            children: [
-              if (_tabController.index == 0) _buildSearchBar(),
-              TabBar(
-                controller: _tabController,
-                indicatorColor: white,
-                labelColor: white,
-                unselectedLabelColor: white.withValues(alpha: 0.7),
-                tabs: [
-                  Tab(text: 'Forums'),
-                  Tab(text: 'Chat Rooms'),
-                  Tab(text: 'Mentors'),
-                ],
-                onTap: (index) {
-                  setState(() {});
-                },
-              ),
-            ],
-          ),
+          preferredSize: Size.fromHeight(60),
+          child: _buildSearchBar(),
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildForumsTab(),
-          _buildChatRoomsTab(),
-          MentorsScreen(),
-        ],
-      ),
+      body: _buildForumsTab(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           _showCreatePostDialog();
@@ -137,15 +112,36 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
         }
 
         if (forumProvider.error != null && forumProvider.posts.isEmpty) {
-          return EmptyState(
-            icon: Icons.error_outline,
-            title: 'Error loading posts',
-            message: forumProvider.error,
-            action: ElevatedButton(
-              onPressed: () {
-                // Retry loading
-              },
-              child: Text('Retry'),
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 64, color: errorRed),
+                SizedBox(height: 16),
+                Text(
+                  'Error loading posts',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                SizedBox(height: 8),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  child: Text(
+                    forumProvider.error ?? 'Unknown error',
+                    style: Theme.of(context).textTheme.bodySmall,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () {
+                    forumProvider.refresh();
+                  },
+                  child: Text('Retry'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryPink,
+                  ),
+                ),
+              ],
             ),
           );
         }
@@ -275,17 +271,23 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
             children: [
               Consumer<ForumProvider>(
                 builder: (context, forumProvider, child) {
+                  final isLiked = forumProvider.isPostLiked(postId);
                   return InkWell(
-                    onTap: () => forumProvider.likePost(postId),
+                    onTap: () => forumProvider.toggleLikePost(postId),
                     child: Row(
                       children: [
-                        Icon(Icons.favorite_border, size: 20, color: primaryPink),
+                        Icon(
+                          isLiked ? Icons.favorite : Icons.favorite_border,
+                          size: 20,
+                          color: isLiked ? primaryPink : primaryPink.withValues(alpha: 0.6),
+                        ),
                         SizedBox(width: 4),
                         Text(
                           '$likes',
                           style: TextStyle(
                             fontSize: 12,
-                            color: primaryPink,
+                            color: isLiked ? primaryPink : primaryPink.withValues(alpha: 0.6),
+                            fontWeight: isLiked ? FontWeight.bold : FontWeight.normal,
                           ),
                         ),
                       ],
@@ -294,12 +296,50 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
                 },
               ),
               SizedBox(width: 20),
-              _buildInteractionButton(Icons.comment_outlined, '$comments', theme.iconTheme.color?.withValues(alpha: 0.6) ?? mediumGrey),
+              StreamBuilder<QuerySnapshot>(
+                stream: _firestoreService.getPostComments(postId),
+                builder: (context, snapshot) {
+                  // Get actual comment count from comments subcollection
+                  final commentCount = snapshot.hasData ? snapshot.data!.docs.length : comments;
+                  
+                  return InkWell(
+                    onTap: () => _showComments(postId, title, author),
+                    child: Row(
+                      children: [
+                        Icon(Icons.comment_outlined, size: 20, color: theme.iconTheme.color?.withValues(alpha: 0.6) ?? mediumGrey),
+                        SizedBox(width: 4),
+                        Text(
+                          '$commentCount',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: theme.iconTheme.color?.withValues(alpha: 0.6) ?? mediumGrey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
               SizedBox(width: 20),
-              _buildInteractionButton(Icons.share_outlined, 'Share', theme.iconTheme.color?.withValues(alpha: 0.6) ?? mediumGrey),
+              InkWell(
+                onTap: () => _sharePost(postId, title, content, author),
+                child: Row(
+                  children: [
+                    Icon(Icons.share_outlined, size: 20, color: theme.iconTheme.color?.withValues(alpha: 0.6) ?? mediumGrey),
+                    SizedBox(width: 4),
+                    Text(
+                      'Share',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.iconTheme.color?.withValues(alpha: 0.6) ?? mediumGrey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               Spacer(),
               TextButton(
-                onPressed: () {},
+                onPressed: () => _showComments(postId, title, author),
                 child: Text('View Comments', style: TextStyle(color: primaryPink)),
               ),
             ],
@@ -326,149 +366,75 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
   }
 
 
-  Widget _buildInteractionButton(IconData icon, String label, Color color) {
-    return InkWell(
-      onTap: () {},
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: color),
-          SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildChatRoomsTab() {
-    return Consumer<ChatProvider>(
-      builder: (context, chatProvider, child) {
-        if (chatProvider.isLoading && chatProvider.chatRooms.isEmpty) {
-          return LoadingIndicator(message: 'Loading chat rooms...');
-        }
-
-        if (chatProvider.error != null && chatProvider.chatRooms.isEmpty) {
-          return EmptyState(
-            icon: Icons.error_outline,
-            title: 'Error loading chat rooms',
-            message: chatProvider.error,
-          );
-        }
-
-        if (chatProvider.chatRooms.isEmpty) {
-          return EmptyState(
-            icon: Icons.chat_bubble_outline,
-            title: 'No chat rooms yet',
-            message: 'Create a chat room to start connecting!',
-          );
-        }
-
-        return ListView.builder(
-          padding: EdgeInsets.all(20),
-          itemCount: chatProvider.chatRooms.length,
-          itemBuilder: (context, index) {
-            final roomData = chatProvider.chatRooms[index];
-            final room = ChatRoom(
-              roomData['name'] ?? 'Unnamed Room',
-              roomData['description'] ?? '',
-              (roomData['memberCount'] ?? 0) as int,
-              roomData['isActive'] ?? false,
-            );
-            return _buildChatRoomCard(room, roomData['id'] as String?);
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildChatRoomCard(ChatRoom room, String? roomId) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    
-    return Container(
-      margin: EdgeInsets.only(bottom: 15),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
-            blurRadius: 10,
-            offset: Offset(0, 5),
-          ),
-        ],
-      ),
-      child: ListTile(
-        contentPadding: EdgeInsets.all(20),
-        leading: Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: primaryPink.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(Icons.chat, color: primaryPink),
+  void _showComments(String postId, String postTitle, String postAuthor) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
         ),
-        title: Row(
+        child: Column(
           children: [
+            // Handle bar
+            Container(
+              margin: EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: mediumGrey,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Title
+            Padding(
+              padding: EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Text(
+                    'Comments',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Spacer(),
+                  IconButton(
+                    icon: Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            Divider(),
+            // Comments content
             Expanded(
-              child: Text(
-                room.name,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            if (room.isActive)
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: successGreen,
-                  shape: BoxShape.circle,
-                ),
-              ),
-          ],
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 5),
-            Text(
-              room.description,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontSize: 14,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              '${room.memberCount} members',
-              style: TextStyle(
-                fontSize: 12,
-                color: primaryPink,
-                fontWeight: FontWeight.w600,
+              child: PostCommentsScreen(
+                postId: postId,
+                postTitle: postTitle,
+                postAuthor: postAuthor,
+                isBottomSheet: true,
               ),
             ),
           ],
         ),
-        trailing: Icon(Icons.chevron_right, color: primaryPink),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ChatRoomScreen(
-                chatRoom: room,
-                chatRoomId: roomId,
-              ),
-            ),
-          );
-        },
+      ),
+    );
+  }
+
+  void _sharePost(String postId, String title, String content, String author) {
+    // Navigate to messaging screen to share post with users
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MessagingScreen(sharePostData: {
+          'postId': postId,
+          'title': title,
+          'content': content,
+          'author': author,
+        }),
       ),
     );
   }
@@ -519,18 +485,25 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
                                  authProvider.user?.displayName ?? 
                                  'Anonymous';
                   
+                  // Close dialog first
+                  Navigator.pop(context);
+                  
+                  // Create post
                   await forumProvider.createPost(
                     _titleController.text.trim(),
                     _contentController.text.trim(),
                     author,
                   );
                   
+                  // Clear controllers
                   _titleController.clear();
                   _contentController.clear();
-                  _titleController.clear();
-                  _contentController.clear();
-                  Navigator.pop(context);
+                  
+                  // Show success message
                   ErrorHandler.showSuccess(context, 'Post created successfully!');
+                  
+                  // Scroll to top to show new post (it will be at the top)
+                  // The real-time stream will automatically update the list
                 } catch (e) {
                   ErrorHandler.showError(context, e);
                 }
@@ -542,6 +515,7 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
       ),
     );
   }
+
 }
 
 class ForumPost {

@@ -3,11 +3,17 @@ import 'package:provider/provider.dart';
 import 'package:coursehub/utils/index.dart';
 import 'package:coursehub/utils/theme_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/user_profile_provider.dart';
+import '../../providers/user_stats_provider.dart';
+import '../../providers/forum_provider.dart';
+import '../../providers/event_provider.dart';
+import '../../providers/course_provider.dart';
 import 'home_tab.dart';
 import '../courses/courses_screen.dart';
 import '../community/community_screen.dart';
 import '../events/events_screen.dart';
 import '../profile/profile_screen.dart';
+import '../messaging/messaging_screen.dart';
 import '../auth/login_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -24,8 +30,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
     CoursesScreen(),
     CommunityScreen(),
     EventsScreen(),
+    MessagingScreen(),
     ProfileScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Refresh user data when dashboard loads to ensure persistence
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshUserData();
+    });
+  }
+
+  void _refreshUserData() {
+    // Refresh all providers to ensure data persists across app restarts
+    final profileProvider = Provider.of<UserProfileProvider>(context, listen: false);
+    profileProvider.refresh();
+    final statsProvider = Provider.of<UserStatsProvider>(context, listen: false);
+    statsProvider.refresh();
+    final forumProvider = Provider.of<ForumProvider>(context, listen: false);
+    forumProvider.refresh();
+    final eventProvider = Provider.of<EventProvider>(context, listen: false);
+    eventProvider.refresh();
+    final courseProvider = Provider.of<CourseProvider>(context, listen: false);
+    courseProvider.refresh();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +84,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ) : null,
-      body: _screens[_currentIndex],
+      body: PopScope(
+        canPop: false, // Prevent back button/swipe from logging out
+        // Only allow logout through settings menu
+        child: _screens[_currentIndex],
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: theme.cardColor,
@@ -97,6 +131,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             BottomNavigationBarItem(
               icon: Icon(Icons.event),
               label: 'Events',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.message),
+              label: 'Messages',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person),

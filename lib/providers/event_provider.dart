@@ -41,6 +41,12 @@ class EventProvider extends ChangeNotifier {
     });
   }
 
+  /// Refreshes events from Firestore
+  /// Call this method to ensure data is loaded after app restart
+  void refresh() {
+    _loadEvents();
+  }
+
   @override
   void dispose() {
     _eventsSubscription?.cancel();

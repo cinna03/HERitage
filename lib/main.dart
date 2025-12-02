@@ -16,18 +16,26 @@ import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase FIRST
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
-  // Enable Firestore offline persistence
+  // CRITICAL: Enable Firestore persistence BEFORE creating any Firestore references
+  // This ensures all data (posts, comments, messages) is cached locally and persists
+  // across app restarts. Data synced while online is saved to disk, and offline
+  // writes are queued and sent when connectivity is restored.
   try {
     await FirebaseFirestore.instance.enablePersistence();
+    print('✅ Firestore persistence enabled successfully');
   } catch (e) {
     // Persistence may already be enabled or not supported on this platform
-    print('Firestore persistence: $e');
+    // On web, persistence uses IndexedDB and is enabled by default
+    print('⚠️ Firestore persistence: $e');
   }
   
+  // Now run the app - all Firestore references created after this point will use persistence
   runApp(HERmonyApp());
 }
 

@@ -46,6 +46,12 @@ class ChatProvider extends ChangeNotifier {
     });
   }
 
+  /// Refreshes chat rooms from Firestore
+  /// Call this method to ensure data is loaded after app restart
+  void refresh() {
+    _loadChatRooms();
+  }
+
   /// Loads messages for a specific chat room with real-time updates
   void loadMessages(String chatRoomId) {
     _currentChatRoomId = chatRoomId;

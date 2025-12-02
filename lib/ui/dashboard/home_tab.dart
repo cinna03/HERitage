@@ -6,6 +6,7 @@ import '../../providers/user_stats_provider.dart';
 import '../../providers/course_provider.dart';
 import '../../providers/user_profile_provider.dart';
 import '../courses/courses_screen.dart';
+import '../notifications/notifications_screen.dart';
 
 class HomeTab extends StatefulWidget {
   @override
@@ -177,7 +178,14 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
             ),
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => NotificationsScreen(),
+                ),
+              );
+            },
             icon: Icon(Icons.notifications, color: primaryPink, size: 28),
             constraints: BoxConstraints(minWidth: 48, minHeight: 48),
           ),

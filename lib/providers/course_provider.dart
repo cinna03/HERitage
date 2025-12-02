@@ -43,6 +43,12 @@ class CourseProvider extends ChangeNotifier {
     });
   }
 
+  /// Refreshes courses from Firestore
+  /// Call this method to ensure data is loaded after app restart
+  void refresh() {
+    _loadCourses();
+  }
+
   @override
   void dispose() {
     _coursesSubscription?.cancel();

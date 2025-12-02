@@ -24,6 +24,10 @@ class ForumProvider extends ChangeNotifier {
 
   /// Loads posts from Firestore with real-time updates
   void _loadPosts() {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    
     _postsSubscription?.cancel();
     _postsSubscription = _firestoreService.getPosts().listen((snapshot) {
       _posts = snapshot.docs.map((doc) {
@@ -34,11 +38,20 @@ class ForumProvider extends ChangeNotifier {
         };
       }).toList();
       _error = null;
+      _isLoading = false;
       notifyListeners();
     }, onError: (error) {
       _error = error.toString();
+      _isLoading = false;
+      print('Error loading posts: $error');
       notifyListeners();
     });
+  }
+
+  /// Refreshes posts from Firestore
+  /// Call this method to ensure data is loaded after app restart
+  void refresh() {
+    _loadPosts();
   }
 
   @override
@@ -67,6 +80,7 @@ class ForumProvider extends ChangeNotifier {
         'userId': user.uid, // Standardized field name for user ID
         'timestamp': FieldValue.serverTimestamp(),
         'likes': 0,
+        'likedBy': [], // Array to track users who liked the post
         'comments': 0,
         'createdAt': DateTime.now().toIso8601String(),
       });
@@ -80,18 +94,66 @@ class ForumProvider extends ChangeNotifier {
     }
   }
 
-  /// Likes a post by incrementing the like count
-  Future<void> likePost(String postId) async {
+  /// Likes or unlikes a post
+  /// Tracks which users have liked the post to prevent duplicate likes
+  Future<void> toggleLikePost(String postId) async {
     try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User must be authenticated to like a post');
+      }
+
       final post = _posts.firstWhere((p) => p['id'] == postId);
+      final likedBy = (post['likedBy'] as List<dynamic>?) ?? [];
+      final isLiked = likedBy.contains(user.uid);
       final currentLikes = (post['likes'] ?? 0) as int;
-      await _firestoreService.updatePost(postId, {
-        'likes': currentLikes + 1,
-      });
+
+      if (isLiked) {
+        // Unlike: remove user from likedBy and decrement count
+        await _firestoreService.updatePost(postId, {
+          'likes': currentLikes - 1,
+          'likedBy': FieldValue.arrayRemove([user.uid]),
+        });
+      } else {
+        // Like: add user to likedBy and increment count
+        await _firestoreService.updatePost(postId, {
+          'likes': currentLikes + 1,
+          'likedBy': FieldValue.arrayUnion([user.uid]),
+        });
+        
+        // Send notification to post author if not the current user
+        final postAuthorId = post['userId'] as String?;
+        if (postAuthorId != null && postAuthorId != user.uid) {
+          await _firestoreService.createNotification(postAuthorId, {
+            'type': 'like',
+            'postId': postId,
+            'postTitle': post['title'] ?? 'Post',
+            'fromUserId': user.uid,
+            'fromUserName': user.displayName ?? user.email?.split('@')[0] ?? 'Someone',
+            'timestamp': FieldValue.serverTimestamp(),
+            'read': false,
+            'createdAt': DateTime.now().toIso8601String(),
+          });
+        }
+      }
     } catch (e) {
       _error = e.toString();
       notifyListeners();
       rethrow;
+    }
+  }
+
+  /// Checks if the current user has liked a post
+  bool isPostLiked(String postId) {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+    
+    try {
+      final post = _posts.firstWhere((p) => p['id'] == postId);
+      final likedBy = (post['likedBy'] as List<dynamic>?) ?? [];
+      return likedBy.contains(user.uid);
+    } catch (e) {
+      return false;
     }
   }
 
@@ -131,8 +193,26 @@ class ForumProvider extends ChangeNotifier {
         'createdAt': DateTime.now().toIso8601String(),
       });
 
-      // Update comment count using service
-      await _firestoreService.updatePostCommentCount(postId, currentComments + 1);
+      // Update comment count using service - use FieldValue.increment for atomic update
+      await _firestoreService.updatePost(postId, {
+        'comments': FieldValue.increment(1),
+      });
+      
+      // Send notification to post author if not the current user
+      final postAuthorId = post['userId'] as String?;
+      if (postAuthorId != null && postAuthorId != user.uid) {
+        await _firestoreService.createNotification(postAuthorId, {
+          'type': 'comment',
+          'postId': postId,
+          'postTitle': post['title'] ?? 'Post',
+          'fromUserId': user.uid,
+          'fromUserName': user.displayName ?? user.email?.split('@')[0] ?? 'Someone',
+          'commentText': comment,
+          'timestamp': FieldValue.serverTimestamp(),
+          'read': false,
+          'createdAt': DateTime.now().toIso8601String(),
+        });
+      }
       
       _error = null;
     } catch (e) {
