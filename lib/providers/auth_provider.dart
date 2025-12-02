@@ -38,7 +38,8 @@ class AuthProvider extends ChangeNotifier {
       _error = null;
       return true;
     } catch (e) {
-      _error = e.toString();
+      // Store the exception object, not just the string
+      _error = e is FirebaseAuthException ? e.code : e.toString();
       return false;
     } finally {
       _setLoading(false);
@@ -53,7 +54,8 @@ class AuthProvider extends ChangeNotifier {
       _error = null;
       return true;
     } catch (e) {
-      _error = e.toString();
+      // Store the exception object, not just the string
+      _error = e is FirebaseAuthException ? e.code : e.toString();
       return false;
     } finally {
       _setLoading(false);
@@ -68,7 +70,8 @@ class AuthProvider extends ChangeNotifier {
       _error = null;
       return true;
     } catch (e) {
-      _error = e.toString();
+      // Store the exception object, not just the string
+      _error = e is FirebaseAuthException ? e.code : e.toString();
       return false;
     } finally {
       _setLoading(false);

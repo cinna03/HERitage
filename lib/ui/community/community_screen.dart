@@ -29,10 +29,18 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
-      backgroundColor: Color(0xFFF8F8F8),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text('Community', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          'Community',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Lato',
+          ),
+        ),
         backgroundColor: primaryPink,
         elevation: 0,
         bottom: TabBar(
@@ -95,7 +103,7 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
         }
 
         return Container(
-          color: Color(0xFFF8F8F8),
+          color: Theme.of(context).scaffoldBackgroundColor,
           child: ListView.builder(
             padding: EdgeInsets.all(20),
             itemCount: forumProvider.posts.length,
@@ -112,6 +120,8 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
 
 
   Widget _buildForumPostCardFromMap(Map<String, dynamic> post) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final author = post['author'] ?? 'Anonymous';
     final title = post['title'] ?? '';
     final content = post['content'] ?? '';
@@ -124,11 +134,11 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
       margin: EdgeInsets.only(bottom: 20),
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: lightPink.withValues(alpha: 0.3),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
             blurRadius: 10,
             offset: Offset(0, 5),
           ),
@@ -151,17 +161,15 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
                   children: [
                     Text(
                       author,
-                      style: TextStyle(
+                      style: theme.textTheme.titleMedium?.copyWith(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: darkGrey,
                       ),
                     ),
                     Text(
                       timestamp,
-                      style: TextStyle(
+                      style: theme.textTheme.bodySmall?.copyWith(
                         fontSize: 12,
-                        color: mediumGrey,
                       ),
                     ),
                   ],
@@ -179,18 +187,16 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
           SizedBox(height: 15),
           Text(
             title,
-            style: TextStyle(
+            style: theme.textTheme.titleLarge?.copyWith(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: darkGrey,
             ),
           ),
           SizedBox(height: 8),
           Text(
             content,
-            style: TextStyle(
+            style: theme.textTheme.bodyMedium?.copyWith(
               fontSize: 14,
-              color: mediumGrey,
               height: 1.4,
             ),
           ),
@@ -218,9 +224,9 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
                 },
               ),
               SizedBox(width: 20),
-              _buildInteractionButton(Icons.comment_outlined, '$comments', mediumGrey),
+              _buildInteractionButton(Icons.comment_outlined, '$comments', theme.iconTheme.color?.withValues(alpha: 0.6) ?? mediumGrey),
               SizedBox(width: 20),
-              _buildInteractionButton(Icons.share_outlined, 'Share', mediumGrey),
+              _buildInteractionButton(Icons.share_outlined, 'Share', theme.iconTheme.color?.withValues(alpha: 0.6) ?? mediumGrey),
               Spacer(),
               TextButton(
                 onPressed: () {},
@@ -311,14 +317,17 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
   }
 
   Widget _buildChatRoomCard(ChatRoom room, String? roomId) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Container(
       margin: EdgeInsets.only(bottom: 15),
       decoration: BoxDecoration(
-        color: white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: lightPink.withValues(alpha: 0.3),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
             blurRadius: 10,
             offset: Offset(0, 5),
           ),
@@ -340,10 +349,9 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
             Expanded(
               child: Text(
                 room.name,
-                style: TextStyle(
+                style: theme.textTheme.titleLarge?.copyWith(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: darkGrey,
                 ),
               ),
             ),
@@ -364,9 +372,8 @@ class _CommunityScreenState extends State<CommunityScreen> with TickerProviderSt
             SizedBox(height: 5),
             Text(
               room.description,
-              style: TextStyle(
+              style: theme.textTheme.bodyMedium?.copyWith(
                 fontSize: 14,
-                color: mediumGrey,
               ),
             ),
             SizedBox(height: 8),

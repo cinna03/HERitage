@@ -30,10 +30,19 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: softPink,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text('Courses', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          'Courses',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Lato',
+          ),
+        ),
         backgroundColor: primaryPink,
         elevation: 0,
       ),
@@ -48,6 +57,8 @@ class _CoursesScreenState extends State<CoursesScreen> {
   }
 
   Widget _buildSearchBar() {
+    final theme = Theme.of(context);
+    
     return Container(
       margin: EdgeInsets.all(20),
       child: TextField(
@@ -56,11 +67,13 @@ class _CoursesScreenState extends State<CoursesScreen> {
             searchQuery = value;
           });
         },
+        style: theme.textTheme.bodyLarge,
         decoration: InputDecoration(
           hintText: 'Search courses...',
+          hintStyle: theme.textTheme.bodyMedium,
           prefixIcon: Icon(Icons.search, color: primaryPink),
           filled: true,
-          fillColor: white,
+          fillColor: theme.cardColor,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
             borderSide: BorderSide.none,
@@ -71,6 +84,9 @@ class _CoursesScreenState extends State<CoursesScreen> {
   }
 
   Widget _buildCategoryFilter() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Container(
       height: 50,
       child: ListView.builder(
@@ -91,11 +107,12 @@ class _CoursesScreenState extends State<CoursesScreen> {
                   selectedCategory = category;
                 });
               },
-              backgroundColor: white,
+              backgroundColor: theme.cardColor,
               selectedColor: primaryPink,
               labelStyle: TextStyle(
-                color: isSelected ? white : darkGrey,
+                color: isSelected ? white : theme.textTheme.bodyLarge?.color,
                 fontWeight: FontWeight.w600,
+                fontFamily: 'Lato',
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
@@ -167,14 +184,17 @@ class _CoursesScreenState extends State<CoursesScreen> {
   }
 
   Widget _buildCourseCard(Course course, String? courseId) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Container(
       margin: EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
-        color: white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: lightPink.withValues(alpha: 0.3),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
             blurRadius: 10,
             offset: Offset(0, 5),
           ),
@@ -220,10 +240,9 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       Expanded(
                         child: Text(
                           course.title,
-                          style: TextStyle(
+                          style: theme.textTheme.titleLarge?.copyWith(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: darkGrey,
                           ),
                         ),
                       ),
@@ -247,9 +266,8 @@ class _CoursesScreenState extends State<CoursesScreen> {
                   SizedBox(height: 8),
                   Text(
                     course.description,
-                    style: TextStyle(
+                    style: theme.textTheme.bodyMedium?.copyWith(
                       fontSize: 14,
-                      color: mediumGrey,
                     ),
                   ),
                   SizedBox(height: 15),
@@ -259,20 +277,18 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       SizedBox(width: 4),
                       Text(
                         course.rating.toString(),
-                        style: TextStyle(
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: darkGrey,
                         ),
                       ),
                       SizedBox(width: 15),
-                      Icon(Icons.people, color: mediumGrey, size: 16),
+                      Icon(Icons.people, color: theme.iconTheme.color?.withValues(alpha: 0.6), size: 16),
                       SizedBox(width: 4),
                       Text(
                         '${course.students} students',
-                        style: TextStyle(
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontSize: 14,
-                          color: mediumGrey,
                         ),
                       ),
                       Spacer(),

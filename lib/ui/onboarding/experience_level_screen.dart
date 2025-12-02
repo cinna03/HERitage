@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:coursehub/utils/index.dart';
+import 'package:coursehub/utils/responsive_helper.dart';
 import 'profile_setup_screen.dart';
 
 class ExperienceLevelScreen extends StatefulWidget {
@@ -47,40 +49,53 @@ class _ExperienceLevelScreenState extends State<ExperienceLevelScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final padding = ResponsiveHelper.getResponsivePadding(context);
+    
     return Scaffold(
-      backgroundColor: softPink,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: IconThemeData(color: primaryPink),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          color: theme.iconTheme.color,
+          onPressed: () => Navigator.pop(context),
+          constraints: BoxConstraints(minWidth: 48, minHeight: 48),
+        ),
         title: Text(
           'Step 3 of 4',
-          style: TextStyle(color: mediumGrey, fontSize: 14),
+          style: TextStyle(
+            color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+            fontSize: 14,
+            fontFamily: 'Lato',
+          ),
         ),
       ),
       body: SafeArea(
         child: Padding(
-          padding: EdgeInsets.all(30),
+          padding: padding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'What\'s your experience level?',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: darkGrey,
+                style: theme.textTheme.headlineLarge?.copyWith(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
                 ),
               ),
-              SizedBox(height: 10),
+              SizedBox(height: 12),
               Text(
                 'This helps us recommend the right content for you',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: mediumGrey,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontSize: 15,
+                  height: 1.4,
                 ),
               ),
-              SizedBox(height: 30),
+              SizedBox(height: 24),
               Expanded(
                 child: ListView.builder(
                   itemCount: levels.length,
@@ -89,84 +104,109 @@ class _ExperienceLevelScreenState extends State<ExperienceLevelScreen> {
                     final isSelected = selectedLevel == level.title;
                     
                     return Container(
-                      margin: EdgeInsets.only(bottom: 20),
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            selectedLevel = level.title;
-                          });
-                        },
-                        child: Container(
-                          padding: EdgeInsets.all(25),
-                          decoration: BoxDecoration(
-                            color: isSelected ? primaryPink : white,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: isSelected ? primaryPink : lightPink,
-                              width: 2,
+                      margin: EdgeInsets.only(bottom: 16),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            setState(() {
+                              selectedLevel = level.title;
+                            });
+                            HapticFeedback.selectionClick();
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: isSelected 
+                                  ? primaryPink 
+                                  : (isDark ? Color(0xFF2D2D2D) : white),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: isSelected 
+                                    ? primaryPink 
+                                    : (isDark ? Color(0xFF404040) : lightPink),
+                                width: isSelected ? 2.5 : 2,
+                              ),
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: primaryPink.withValues(alpha: 0.3),
+                                        blurRadius: 12,
+                                        offset: Offset(0, 4),
+                                      ),
+                                    ]
+                                  : [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+                                        blurRadius: 8,
+                                        offset: Offset(0, 2),
+                                      ),
+                                    ],
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: lightPink.withValues(alpha: 0.3),
-                                blurRadius: 10,
-                                offset: Offset(0, 5),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 60,
-                                height: 60,
-                                decoration: BoxDecoration(
-                                  color: isSelected ? white : primaryPink.withValues(alpha: 0.1),
-                                  shape: BoxShape.circle,
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 64,
+                                  height: 64,
+                                  decoration: BoxDecoration(
+                                    color: isSelected 
+                                        ? white.withValues(alpha: 0.2)
+                                        : primaryPink.withValues(alpha: isDark ? 0.15 : 0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    level.icon,
+                                    color: isSelected ? white : primaryPink,
+                                    size: 32,
+                                  ),
                                 ),
-                                child: Icon(
-                                  level.icon,
-                                  color: isSelected ? primaryPink : primaryPink,
-                                  size: 30,
-                                ),
-                              ),
-                              SizedBox(width: 20),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      level.title,
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: isSelected ? white : darkGrey,
+                                SizedBox(width: 20),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        level.title,
+                                        style: theme.textTheme.titleLarge?.copyWith(
+                                          color: isSelected 
+                                              ? white 
+                                              : theme.textTheme.titleLarge?.color,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 18,
+                                        ),
                                       ),
-                                    ),
-                                    SizedBox(height: 5),
-                                    Text(
-                                      level.description,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: isSelected ? white.withValues(alpha: 0.9) : mediumGrey,
+                                      SizedBox(height: 6),
+                                      Text(
+                                        level.description,
+                                        style: theme.textTheme.bodyMedium?.copyWith(
+                                          color: isSelected 
+                                              ? white.withValues(alpha: 0.9)
+                                              : theme.textTheme.bodyMedium?.color,
+                                          height: 1.3,
+                                        ),
                                       ),
-                                    ),
-                                    SizedBox(height: 3),
-                                    Text(
-                                      level.subtitle,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: isSelected ? white.withValues(alpha: 0.7) : mediumGrey,
+                                      SizedBox(height: 4),
+                                      Text(
+                                        level.subtitle,
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          color: isSelected 
+                                              ? white.withValues(alpha: 0.7)
+                                              : theme.textTheme.bodySmall?.color,
+                                          fontSize: 12,
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              if (isSelected)
-                                Icon(
-                                  Icons.check_circle,
-                                  color: white,
-                                  size: 28,
-                                ),
-                            ],
+                                if (isSelected)
+                                  Icon(
+                                    Icons.check_circle,
+                                    color: white,
+                                    size: 28,
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -174,8 +214,10 @@ class _ExperienceLevelScreenState extends State<ExperienceLevelScreen> {
                   },
                 ),
               ),
-              Container(
+              SizedBox(height: 16),
+              SizedBox(
                 width: double.infinity,
+                height: 56,
                 child: ElevatedButton(
                   onPressed: selectedLevel != null ? () {
                     Navigator.push(
@@ -189,10 +231,26 @@ class _ExperienceLevelScreenState extends State<ExperienceLevelScreen> {
                       ),
                     );
                   } : null,
-                  child: Text('Continue', style: TextStyle(fontSize: 16)),
                   style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 15),
-                    backgroundColor: selectedLevel != null ? primaryPink : lightPink,
+                    backgroundColor: selectedLevel != null 
+                        ? primaryPink 
+                        : (isDark ? Color(0xFF2D2D2D) : lightPink),
+                    foregroundColor: selectedLevel != null 
+                        ? white 
+                        : (isDark ? Color(0xFF9E9E9E) : mediumGrey),
+                    elevation: selectedLevel != null ? 2 : 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: Text(
+                    'Continue',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Lato',
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ),
               ),

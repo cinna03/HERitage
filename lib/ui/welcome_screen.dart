@@ -34,7 +34,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Stack(
         children: [
           SafeArea(
@@ -63,6 +66,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       Container(
                         width: double.infinity,
                         margin: EdgeInsets.symmetric(horizontal: 30),
+                        height: 56,
                         child: ElevatedButton(
                           onPressed: () {
                             Navigator.push(
@@ -70,9 +74,19 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                               MaterialPageRoute(builder: (context) => SignUpScreen()),
                             );
                           },
-                          child: Text('Get Started', style: TextStyle(fontSize: 16)),
+                          child: Text(
+                            'Get Started',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Lato',
+                              letterSpacing: 0.5,
+                            ),
+                          ),
                           style: ElevatedButton.styleFrom(
-                            padding: EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                           ),
                         ),
                       ),
@@ -84,9 +98,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                             MaterialPageRoute(builder: (context) => LoginScreen()),
                           );
                         },
+                        style: TextButton.styleFrom(
+                          minimumSize: Size(88, 48),
+                        ),
                         child: Text(
                           'Already have an account? Sign In',
-                          style: TextStyle(color: primaryPink, fontSize: 14),
+                          style: TextStyle(
+                            color: primaryPink,
+                            fontSize: 14,
+                            fontFamily: 'Lato',
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ],
@@ -108,6 +130,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       color: primaryPink,
                       size: 28,
                     ),
+                    constraints: BoxConstraints(minWidth: 48, minHeight: 48),
                   );
                 },
               ),

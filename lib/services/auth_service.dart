@@ -1,11 +1,19 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 /// Service for handling authentication operations with Firebase
 /// Provides methods for email/password and Google Sign-In authentication
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  
+  // Configure GoogleSignIn with web client ID when running on web
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    // For web, use the client ID from Firebase Console
+    // This should match the OAuth 2.0 Client ID for your web app
+    clientId: kIsWeb ? '597720652794-21e0bfd77addcd2d042243.apps.googleusercontent.com' : null,
+    scopes: ['email', 'profile'],
+  );
 
   /// Gets the currently authenticated user
   User? get currentUser => _auth.currentUser;
@@ -68,7 +76,14 @@ class AuthService {
 
   /// Signs out the current user from both Firebase and Google Sign-In
   Future<void> signOut() async {
-    await _googleSignIn.signOut();
+    // Try to sign out from Google Sign-In, but don't fail if it's not configured
+    try {
+      await _googleSignIn.signOut();
+    } catch (e) {
+      // Ignore Google Sign-In errors (e.g., if not configured for web)
+      // The important part is signing out from Firebase Auth
+    }
+    // Always sign out from Firebase Auth
     await _auth.signOut();
   }
 

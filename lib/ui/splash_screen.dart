@@ -38,7 +38,10 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Stack(
         children: [
           Center(
@@ -71,9 +74,8 @@ class _SplashScreenState extends State<SplashScreen> {
                 SizedBox(height: 10),
                 Text(
                   'Empowering African Women in Arts',
-                  style: TextStyle(
+                  style: theme.textTheme.bodyLarge?.copyWith(
                     fontSize: 16,
-                    color: Theme.of(context).brightness == Brightness.dark ? white : darkGrey,
                     fontFamily: 'Lato',
                   ),
                 ),
@@ -93,6 +95,7 @@ class _SplashScreenState extends State<SplashScreen> {
                       color: primaryPink,
                       size: 28,
                     ),
+                    constraints: BoxConstraints(minWidth: 48, minHeight: 48),
                   );
                 },
               ),

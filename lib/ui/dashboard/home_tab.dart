@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:coursehub/utils/index.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_stats_provider.dart';
+import '../../providers/course_provider.dart';
+import '../../providers/user_profile_provider.dart';
+import '../courses/courses_screen.dart';
 
 class HomeTab extends StatefulWidget {
   @override
@@ -38,6 +41,13 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
         curve: Curves.easeInOut,
       ))
     ).toList();
+    
+    // Refresh user statistics when home tab loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final statsProvider = Provider.of<UserStatsProvider>(context, listen: false);
+      statsProvider.refresh();
+      // Profile will load automatically via UserProfileProvider
+    });
   }
 
   @override
@@ -50,8 +60,11 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: softPink,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Stack(
         children: [
           // Animated bubbles
@@ -67,7 +80,9 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                     height: 60 + (index * 20),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: lightPink.withValues(alpha: 0.3 - (index * 0.05)),
+                      color: isDark 
+                          ? primaryPink.withValues(alpha: 0.1 - (index * 0.02))
+                          : lightPink.withValues(alpha: 0.3 - (index * 0.05)),
                     ),
                   ),
                 );
@@ -77,22 +92,33 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
           
           // Main content
           SafeArea(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(),
-                  SizedBox(height: 20),
-                  _buildWelcomeCard(),
-                  SizedBox(height: 25),
-                  _buildQuickActions(),
-                  SizedBox(height: 25),
-                  _buildFeaturedCourses(),
-                  SizedBox(height: 25),
-                  _buildProgressSection(),
-                  SizedBox(height: 25),
-                  _buildCommunityHighlights(),
-                ],
+            child: RefreshIndicator(
+              onRefresh: () async {
+                // Refresh user statistics and profile when user pulls down
+                final statsProvider = Provider.of<UserStatsProvider>(context, listen: false);
+                final profileProvider = Provider.of<UserProfileProvider>(context, listen: false);
+                await Future.wait([
+                  statsProvider.refresh(),
+                  profileProvider.refresh(),
+                ]);
+              },
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader(),
+                    SizedBox(height: 20),
+                    _buildWelcomeCard(),
+                    SizedBox(height: 25),
+                    _buildQuickActions(),
+                    SizedBox(height: 25),
+                    _buildFeaturedCourses(),
+                    SizedBox(height: 25),
+                    _buildProgressSection(),
+                    SizedBox(height: 25),
+                    _buildCommunityHighlights(),
+                  ],
+                ),
               ),
             ),
           ),
@@ -104,6 +130,9 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
   /// Builds the header section with user avatar and welcome message
   /// Displays user name from AuthProvider or defaults to 'Creative Sister'
   Widget _buildHeader() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Padding(
       padding: EdgeInsets.all(20),
       child: Row(
@@ -115,29 +144,33 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
           ),
           SizedBox(width: 15),
           Expanded(
-            child: Consumer<AuthProvider>(
-              builder: (context, authProvider, child) {
-                final userName = authProvider.user?.displayName ?? 
-                                authProvider.userEmail?.split('@')[0] ?? 
-                                'Creative Sister';
+            child: Consumer<UserProfileProvider>(
+              builder: (context, profileProvider, child) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Welcome back!',
-                      style: TextStyle(
+                      style: theme.textTheme.bodyMedium?.copyWith(
                         fontSize: 16,
-                        color: mediumGrey,
                       ),
                     ),
-                    Text(
-                      userName,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: darkGrey,
-                      ),
-                    ),
+                    profileProvider.isLoading
+                        ? SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(primaryPink),
+                            ),
+                          )
+                        : Text(
+                            profileProvider.getDisplayName(),
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ],
                 );
               },
@@ -146,6 +179,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
           IconButton(
             onPressed: () {},
             icon: Icon(Icons.notifications, color: primaryPink, size: 28),
+            constraints: BoxConstraints(minWidth: 48, minHeight: 48),
           ),
         ],
       ),
@@ -155,56 +189,117 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
   /// Builds the welcome card showing course progress
   /// Displays gradient card with progress indicator and continue button
   Widget _buildWelcomeCard() {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 20),
-      padding: EdgeInsets.all(25),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [primaryPink, rosePink],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Continue Your Journey',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: white,
-            ),
-          ),
-          SizedBox(height: 10),
-          Text(
-            'You\'re 60% through your current course',
-            style: TextStyle(
-              fontSize: 16,
-              color: white.withValues(alpha: 0.9),
-            ),
-          ),
-          SizedBox(height: 15),
-          LinearProgressIndicator(
-            value: 0.6,
-            backgroundColor: white.withValues(alpha: 0.3),
-            valueColor: AlwaysStoppedAnimation<Color>(white),
-          ),
-          SizedBox(height: 15),
-          ElevatedButton(
-            onPressed: () {},
-            child: Text('Continue Learning'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: white,
-              foregroundColor: primaryPink,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
+    return Consumer<CourseProvider>(
+      builder: (context, courseProvider, child) {
+        return StreamBuilder(
+          stream: courseProvider.getUserProgress(),
+          builder: (context, snapshot) {
+            double progress = 0.0;
+            String courseTitle = 'Start Learning';
+            String? courseId;
+            bool hasProgress = false;
+            
+            if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+              // Find the most recent in-progress course (not completed)
+              final progressDocs = snapshot.data!.docs;
+              for (var doc in progressDocs) {
+                final data = doc.data() as Map<String, dynamic>;
+                final isCompleted = data['completed'] == true;
+                if (!isCompleted) {
+                  final progressValue = data['progress'] as num?;
+                  if (progressValue != null && progressValue > 0) {
+                    progress = progressValue.toDouble() / 100.0;
+                    courseId = data['courseId'] as String?;
+                    hasProgress = true;
+                    break; // Use the first in-progress course found
+                  }
+                }
+              }
+              
+              // If we found a course ID, try to get the course title
+              if (courseId != null && hasProgress) {
+                final course = courseProvider.courses.firstWhere(
+                  (c) => c['id'] == courseId,
+                  orElse: () => {},
+                );
+                if (course.isNotEmpty) {
+                  courseTitle = course['title'] as String? ?? 'Your Course';
+                }
+              }
+            }
+            
+            return Container(
+              margin: EdgeInsets.symmetric(horizontal: 20),
+              padding: EdgeInsets.all(25),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [primaryPink, rosePink],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
               ),
-            ),
-          ),
-        ],
-      ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    hasProgress ? 'Continue Your Journey' : 'Start Your Journey',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: white,
+                      fontFamily: 'Lato',
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    hasProgress
+                        ? 'You\'re ${(progress * 100).toInt()}% through "$courseTitle"'
+                        : 'Begin your creative learning journey today!',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: white.withValues(alpha: 0.9),
+                      fontFamily: 'Lato',
+                    ),
+                  ),
+                  if (hasProgress) ...[
+                    SizedBox(height: 15),
+                    LinearProgressIndicator(
+                      value: progress,
+                      backgroundColor: white.withValues(alpha: 0.3),
+                      valueColor: AlwaysStoppedAnimation<Color>(white),
+                    ),
+                  ],
+                  SizedBox(height: 15),
+                  ElevatedButton(
+                    onPressed: () {
+                      // Navigate to courses screen or current course
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => CoursesScreen()),
+                      );
+                    },
+                    child: Text(
+                      hasProgress ? 'Continue Learning' : 'Browse Courses',
+                      style: TextStyle(
+                        fontFamily: 'Lato',
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: white,
+                      foregroundColor: primaryPink,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -218,10 +313,9 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
         children: [
           Text(
             'Quick Actions',
-            style: TextStyle(
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: darkGrey,
             ),
           ),
           SizedBox(height: 15),
@@ -250,14 +344,17 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
   /// [icon] - The icon to show for this action
   /// [color] - The primary color for the icon background
   Widget _buildActionCard(String title, IconData icon, Color color) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Container(
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: lightPink.withValues(alpha: 0.3),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
             blurRadius: 10,
             offset: Offset(0, 5),
           ),
@@ -269,7 +366,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
+              color: color.withValues(alpha: isDark ? 0.2 : 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 25),
@@ -277,10 +374,9 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
           SizedBox(height: 10),
           Text(
             title,
-            style: TextStyle(
+            style: theme.textTheme.titleMedium?.copyWith(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: darkGrey,
             ),
             textAlign: TextAlign.center,
           ),
@@ -302,10 +398,9 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
             children: [
               Text(
                 'Featured Courses',
-                style: TextStyle(
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: darkGrey,
                 ),
               ),
               TextButton(
@@ -323,15 +418,18 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
             padding: EdgeInsets.symmetric(horizontal: 20),
             itemCount: 3,
             itemBuilder: (context, index) {
+              final theme = Theme.of(context);
+              final isDark = theme.brightness == Brightness.dark;
+              
               return Container(
                 width: 280,
                 margin: EdgeInsets.only(right: 15),
                 decoration: BoxDecoration(
-                  color: white,
+                  color: theme.cardColor,
                   borderRadius: BorderRadius.circular(15),
                   boxShadow: [
                     BoxShadow(
-                      color: lightPink.withValues(alpha: 0.3),
+                      color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
                       blurRadius: 10,
                       offset: Offset(0, 5),
                     ),
@@ -343,7 +441,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                     Container(
                       height: 120,
                       decoration: BoxDecoration(
-                        color: primaryPink.withValues(alpha: 0.1),
+                        color: primaryPink.withValues(alpha: isDark ? 0.2 : 0.1),
                         borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
                       ),
                       child: Center(
@@ -357,18 +455,16 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                         children: [
                           Text(
                             'Digital Painting Basics',
-                            style: TextStyle(
+                            style: theme.textTheme.titleMedium?.copyWith(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: darkGrey,
                             ),
                           ),
                           SizedBox(height: 5),
                           Text(
                             'Learn fundamental techniques',
-                            style: TextStyle(
+                            style: theme.textTheme.bodyMedium?.copyWith(
                               fontSize: 14,
-                              color: mediumGrey,
                             ),
                           ),
                         ],
@@ -390,30 +486,34 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
   Widget _buildProgressSection() {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20),
-      child: Container(
-        padding: EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: white,
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: [
-            BoxShadow(
-              color: lightPink.withValues(alpha: 0.3),
-              blurRadius: 10,
-              offset: Offset(0, 5),
+      child: Builder(
+        builder: (context) {
+          final theme = Theme.of(context);
+          final isDark = theme.brightness == Brightness.dark;
+          
+          return Container(
+            padding: EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
+                  blurRadius: 10,
+                  offset: Offset(0, 5),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Your Progress',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: darkGrey,
-              ),
-            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Your Progress',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
             SizedBox(height: 15),
             Row(
               children: [
@@ -489,8 +589,10 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                 );
               },
             ),
-          ],
-        ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -519,6 +621,9 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
   }
 
   Widget _buildCommunityHighlights() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20),
       child: Column(
@@ -526,21 +631,20 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
         children: [
           Text(
             'Community Highlights',
-            style: TextStyle(
+            style: theme.textTheme.titleLarge?.copyWith(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: darkGrey,
             ),
           ),
           SizedBox(height: 15),
           Container(
             padding: EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: white,
+              color: theme.cardColor,
               borderRadius: BorderRadius.circular(15),
               boxShadow: [
                 BoxShadow(
-                  color: lightPink.withValues(alpha: 0.3),
+                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
                   blurRadius: 10,
                   offset: Offset(0, 5),
                 ),
@@ -553,18 +657,30 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                     backgroundColor: primaryPink,
                     child: Icon(Icons.person, color: white),
                   ),
-                  title: Text('Sarah M. shared her artwork'),
-                  subtitle: Text('2 hours ago'),
+                  title: Text(
+                    'Sarah M. shared her artwork',
+                    style: theme.textTheme.bodyLarge,
+                  ),
+                  subtitle: Text(
+                    '2 hours ago',
+                    style: theme.textTheme.bodySmall,
+                  ),
                   contentPadding: EdgeInsets.zero,
                 ),
-                Divider(color: lightPink),
+                Divider(color: isDark ? Color(0xFF404040) : lightPink),
                 ListTile(
                   leading: CircleAvatar(
                     backgroundColor: rosePink,
                     child: Icon(Icons.event, color: white),
                   ),
-                  title: Text('New workshop: "Color Theory"'),
-                  subtitle: Text('Tomorrow at 3 PM'),
+                  title: Text(
+                    'New workshop: "Color Theory"',
+                    style: theme.textTheme.bodyLarge,
+                  ),
+                  subtitle: Text(
+                    'Tomorrow at 3 PM',
+                    style: theme.textTheme.bodySmall,
+                  ),
                   contentPadding: EdgeInsets.zero,
                 ),
               ],

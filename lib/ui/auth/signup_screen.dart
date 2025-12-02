@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:coursehub/utils/index.dart';
+import 'package:coursehub/utils/responsive_helper.dart';
 import '../../providers/auth_provider.dart';
+import '../../utils/error_handler.dart';
 import 'email_verification_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -31,25 +33,33 @@ class _SignUpScreenState extends State<SignUpScreen> {
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sign up failed: ${authProvider.error}')),
-        );
+        // Use ErrorHandler for consistent, user-friendly error messages
+        ErrorHandler.showError(context, authProvider.error ?? 'Sign up failed. Please try again.');
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final padding = ResponsiveHelper.getResponsivePadding(context);
+    
     return Scaffold(
-      backgroundColor: softPink,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: IconThemeData(color: primaryPink),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          color: theme.iconTheme.color,
+          onPressed: () => Navigator.pop(context),
+          constraints: BoxConstraints(minWidth: 48, minHeight: 48),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(30),
+          padding: padding,
           child: Form(
             key: _formKey,
             child: Column(
@@ -57,18 +67,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
               children: [
                 Text(
                   'Create Account',
-                  style: TextStyle(
+                  style: theme.textTheme.headlineLarge?.copyWith(
                     fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: darkGrey,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.5,
                   ),
                 ),
-                SizedBox(height: 10),
+                SizedBox(height: 12),
                 Text(
                   'Join the Hermony community',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: mediumGrey,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontSize: 15,
+                    height: 1.4,
                   ),
                 ),
                 SizedBox(height: 40),
@@ -140,10 +150,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 SizedBox(height: 40),
                 Consumer<AuthProvider>(
                   builder: (context, authProvider, child) {
-                    return Container(
+                    return SizedBox(
                       width: double.infinity,
+                      height: 56,
                       child: ElevatedButton(
                         onPressed: authProvider.isLoading ? null : _signUp,
+                        style: ElevatedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
                         child: authProvider.isLoading
                             ? SizedBox(
                                 width: 20,
@@ -153,10 +169,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   valueColor: AlwaysStoppedAnimation<Color>(white),
                                 ),
                               )
-                            : Text('Sign Up', style: TextStyle(fontSize: 16)),
-                        style: ElevatedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: 15),
-                        ),
+                            : Text(
+                                'Sign Up',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'Lato',
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
                       ),
                     );
                   },

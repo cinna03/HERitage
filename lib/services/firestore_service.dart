@@ -157,20 +157,30 @@ class FirestoreService {
 
   // ==================== User Statistics ====================
   Future<Map<String, dynamic>> getUserStatistics(String userId) async {
+    // Get all course progress (both completed and in-progress)
+    final allProgressSnapshot = await _db.collection('users').doc(userId).collection('courseProgress').get();
+    
     // Get courses completed
-    final progressSnapshot = await _db.collection('users').doc(userId).collection('courseProgress')
-        .where('completed', isEqualTo: true).get();
-    final coursesCompleted = progressSnapshot.docs.length;
-
-    // Get posts count
-    final postsSnapshot = await _db.collection('posts').where('userId', isEqualTo: userId).get();
-    final postsCount = postsSnapshot.docs.length;
-
-    // Get total hours learned (sum of course durations)
-    int totalHours = 0;
-    for (var doc in progressSnapshot.docs) {
+    final coursesCompleted = allProgressSnapshot.docs.where((doc) {
       final data = doc.data();
-      totalHours += (data['hoursSpent'] as int? ?? 0);
+      return data['completed'] == true;
+    }).length;
+
+    // Get posts count - check both 'userId' and 'author' fields for compatibility
+    final postsByUserId = await _db.collection('posts').where('userId', isEqualTo: userId).get();
+    final postsByAuthor = await _db.collection('posts').where('author', isEqualTo: userId).get();
+    // Combine and deduplicate by post ID
+    final allPostIds = <String>{};
+    postsByUserId.docs.forEach((doc) => allPostIds.add(doc.id));
+    postsByAuthor.docs.forEach((doc) => allPostIds.add(doc.id));
+    final postsCount = allPostIds.length;
+
+    // Get total hours learned (sum of hoursSpent from all progress, not just completed)
+    int totalHours = 0;
+    for (var doc in allProgressSnapshot.docs) {
+      final data = doc.data();
+      final hoursSpent = data['hoursSpent'] as int? ?? 0;
+      totalHours += hoursSpent;
     }
 
     // Get certificates earned

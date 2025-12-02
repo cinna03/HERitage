@@ -4,6 +4,7 @@ import 'package:coursehub/utils/index.dart';
 import '../../utils/error_handler.dart';
 import '../../models/course.dart';
 import '../../providers/course_provider.dart';
+import '../../providers/user_stats_provider.dart';
 
 class CourseContentScreen extends StatefulWidget {
   final Course course;
@@ -59,6 +60,10 @@ class _CourseContentScreenState extends State<CourseContentScreen> {
     try {
       await courseProvider.updateProgress(widget.courseId!, newProgress);
       _calculateProgress();
+      
+      // Refresh user statistics after progress update
+      final statsProvider = Provider.of<UserStatsProvider>(context, listen: false);
+      await statsProvider.refresh();
     } catch (e) {
       ErrorHandler.showError(context, e);
     }
@@ -71,6 +76,11 @@ class _CourseContentScreenState extends State<CourseContentScreen> {
     
     try {
       await courseProvider.markComplete(widget.courseId!);
+      
+      // Refresh user statistics after course completion
+      final statsProvider = Provider.of<UserStatsProvider>(context, listen: false);
+      await statsProvider.refresh();
+      
       ErrorHandler.showSuccess(context, '🎉 Congratulations! Course completed! Certificate earned.');
     } catch (e) {
       ErrorHandler.showError(context, e);

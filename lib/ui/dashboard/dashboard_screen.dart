@@ -8,6 +8,7 @@ import '../courses/courses_screen.dart';
 import '../community/community_screen.dart';
 import '../events/events_screen.dart';
 import '../profile/profile_screen.dart';
+import '../auth/login_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   @override
@@ -16,6 +17,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _currentIndex = 0;
+  int _previousIndex = 0;
 
   final List<Widget> _screens = [
     HomeTab(),
@@ -27,10 +29,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: _currentIndex == 0 ? AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        automaticallyImplyLeading: false,
         actions: [
           Consumer<ThemeProvider>(
             builder: (context, themeProvider, child) {
@@ -40,20 +47,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
                   color: primaryPink,
                 ),
-              );
-            },
-          ),
-          Consumer<AuthProvider>(
-            builder: (context, authProvider, child) {
-              return IconButton(
-                onPressed: () async {
-                  await authProvider.signOut();
-                  Navigator.pushReplacementNamed(context, '/');
-                },
-                icon: Icon(
-                  Icons.logout,
-                  color: primaryPink,
-                ),
+                tooltip: 'Toggle theme',
+                constraints: BoxConstraints(minWidth: 48, minHeight: 48),
               );
             },
           ),
@@ -62,10 +57,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: _screens[_currentIndex],
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: white,
+          color: theme.cardColor,
           boxShadow: [
             BoxShadow(
-              color: lightPink.withValues(alpha: 0.3),
+              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
               blurRadius: 10,
               offset: Offset(0, -5),
             ),
@@ -75,14 +70,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           currentIndex: _currentIndex,
           onTap: (index) {
             setState(() {
+              _previousIndex = _currentIndex;
               _currentIndex = index;
             });
           },
           type: BottomNavigationBarType.fixed,
-          backgroundColor: white,
+          backgroundColor: theme.cardColor,
           selectedItemColor: primaryPink,
-          unselectedItemColor: mediumGrey,
-          selectedLabelStyle: TextStyle(fontWeight: FontWeight.w600),
+          unselectedItemColor: isDark 
+              ? theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6)
+              : mediumGrey,
+          selectedLabelStyle: TextStyle(fontWeight: FontWeight.w600, fontFamily: 'Lato'),
           items: [
             BottomNavigationBarItem(
               icon: Icon(Icons.home),

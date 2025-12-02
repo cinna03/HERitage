@@ -30,7 +30,8 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (context) => DashboardScreen()),
       );
     } else {
-      ErrorHandler.showError(context, authProvider.error);
+      // Pass the error code string which ErrorHandler will convert to user-friendly message
+      ErrorHandler.showError(context, authProvider.error ?? 'Login failed. Please try again.');
     }
   }
 
@@ -45,7 +46,8 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (context) => DashboardScreen()),
       );
     } else {
-      ErrorHandler.showError(context, authProvider.error);
+      // Pass the error code string which ErrorHandler will convert to user-friendly message
+      ErrorHandler.showError(context, authProvider.error ?? 'Google sign-in failed. Please try again.');
     }
   }
 
@@ -76,12 +78,17 @@ class _LoginScreenState extends State<LoginScreen> {
             Positioned(bottom: 200, left: 50, child: _buildCircle(100, rosePink.withValues(alpha: 0.6))),
             
             // Login form
-            Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 40),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
+            SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
+                ),
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
                     Text(
                       'Login',
                       style: TextStyle(
@@ -209,6 +216,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                     ),
                   ],
+                    ),
+                  ),
                 ),
               ),
             ),

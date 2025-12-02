@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:coursehub/utils/index.dart';
+import 'package:coursehub/utils/responsive_helper.dart';
 import 'experience_level_screen.dart';
 
 class GoalSettingScreen extends StatefulWidget {
@@ -49,40 +51,53 @@ class _GoalSettingScreenState extends State<GoalSettingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final padding = ResponsiveHelper.getResponsivePadding(context);
+    
     return Scaffold(
-      backgroundColor: softPink,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: IconThemeData(color: primaryPink),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          color: theme.iconTheme.color,
+          onPressed: () => Navigator.pop(context),
+          constraints: BoxConstraints(minWidth: 48, minHeight: 48),
+        ),
         title: Text(
           'Step 2 of 4',
-          style: TextStyle(color: mediumGrey, fontSize: 14),
+          style: TextStyle(
+            color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+            fontSize: 14,
+            fontFamily: 'Lato',
+          ),
         ),
       ),
       body: SafeArea(
         child: Padding(
-          padding: EdgeInsets.all(30),
+          padding: padding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'What do you want to achieve?',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: darkGrey,
+                style: theme.textTheme.headlineLarge?.copyWith(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
                 ),
               ),
-              SizedBox(height: 10),
+              SizedBox(height: 12),
               Text(
                 'Choose your primary goal to personalize your experience',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: mediumGrey,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontSize: 15,
+                  height: 1.4,
                 ),
               ),
-              SizedBox(height: 30),
+              SizedBox(height: 24),
               Expanded(
                 child: ListView.builder(
                   itemCount: goals.length,
@@ -91,69 +106,98 @@ class _GoalSettingScreenState extends State<GoalSettingScreen> {
                     final isSelected = selectedGoal == goal.title;
                     
                     return Container(
-                      margin: EdgeInsets.only(bottom: 15),
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            selectedGoal = goal.title;
-                          });
-                        },
-                        child: Container(
-                          padding: EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: isSelected ? primaryPink : white,
-                            borderRadius: BorderRadius.circular(15),
-                            border: Border.all(
-                              color: isSelected ? primaryPink : lightPink,
-                              width: 2,
+                      margin: EdgeInsets.only(bottom: 16),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            setState(() {
+                              selectedGoal = goal.title;
+                            });
+                            HapticFeedback.selectionClick();
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: isSelected 
+                                  ? primaryPink 
+                                  : (isDark ? Color(0xFF2D2D2D) : white),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: isSelected 
+                                    ? primaryPink 
+                                    : (isDark ? Color(0xFF404040) : lightPink),
+                                width: isSelected ? 2.5 : 2,
+                              ),
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: primaryPink.withValues(alpha: 0.3),
+                                        blurRadius: 12,
+                                        offset: Offset(0, 4),
+                                      ),
+                                    ]
+                                  : [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+                                        blurRadius: 8,
+                                        offset: Offset(0, 2),
+                                      ),
+                                    ],
                             ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: isSelected ? white : primaryPink.withValues(alpha: 0.1),
-                                  shape: BoxShape.circle,
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 56,
+                                  height: 56,
+                                  decoration: BoxDecoration(
+                                    color: isSelected 
+                                        ? white.withValues(alpha: 0.2)
+                                        : primaryPink.withValues(alpha: isDark ? 0.15 : 0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    goal.icon,
+                                    color: isSelected ? white : primaryPink,
+                                    size: 28,
+                                  ),
                                 ),
-                                child: Icon(
-                                  goal.icon,
-                                  color: isSelected ? primaryPink : primaryPink,
-                                  size: 25,
-                                ),
-                              ),
-                              SizedBox(width: 15),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      goal.title,
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: isSelected ? white : darkGrey,
+                                SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        goal.title,
+                                        style: theme.textTheme.titleLarge?.copyWith(
+                                          color: isSelected 
+                                              ? white 
+                                              : theme.textTheme.titleLarge?.color,
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                       ),
-                                    ),
-                                    SizedBox(height: 5),
-                                    Text(
-                                      goal.description,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: isSelected ? white.withValues(alpha: 0.8) : mediumGrey,
+                                      SizedBox(height: 6),
+                                      Text(
+                                        goal.description,
+                                        style: theme.textTheme.bodyMedium?.copyWith(
+                                          color: isSelected 
+                                              ? white.withValues(alpha: 0.85)
+                                              : theme.textTheme.bodyMedium?.color,
+                                          height: 1.3,
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              if (isSelected)
-                                Icon(
-                                  Icons.check_circle,
-                                  color: white,
-                                  size: 24,
-                                ),
-                            ],
+                                if (isSelected)
+                                  Icon(
+                                    Icons.check_circle,
+                                    color: white,
+                                    size: 28,
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -161,8 +205,10 @@ class _GoalSettingScreenState extends State<GoalSettingScreen> {
                   },
                 ),
               ),
-              Container(
+              SizedBox(height: 16),
+              SizedBox(
                 width: double.infinity,
+                height: 56,
                 child: ElevatedButton(
                   onPressed: selectedGoal != null ? () {
                     Navigator.push(
@@ -175,10 +221,26 @@ class _GoalSettingScreenState extends State<GoalSettingScreen> {
                       ),
                     );
                   } : null,
-                  child: Text('Continue', style: TextStyle(fontSize: 16)),
                   style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 15),
-                    backgroundColor: selectedGoal != null ? primaryPink : lightPink,
+                    backgroundColor: selectedGoal != null 
+                        ? primaryPink 
+                        : (isDark ? Color(0xFF2D2D2D) : lightPink),
+                    foregroundColor: selectedGoal != null 
+                        ? white 
+                        : (isDark ? Color(0xFF9E9E9E) : mediumGrey),
+                    elevation: selectedGoal != null ? 2 : 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: Text(
+                    'Continue',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Lato',
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ),
               ),

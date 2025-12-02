@@ -1,5 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'package:coursehub/utils/index.dart';
+import 'package:coursehub/utils/responsive_helper.dart';
+import '../../services/firestore_service.dart';
+import '../../services/storage_service.dart';
+import '../../services/auth_service.dart';
+import '../../utils/error_handler.dart';
 import '../dashboard/dashboard_screen.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
@@ -21,6 +31,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _bioController = TextEditingController();
+  final _imagePicker = ImagePicker();
+  final _firestoreService = FirestoreService();
+  final _storageService = StorageService();
+  final _authService = AuthService();
+  File? _profileImage;
   bool _isLoading = false;
 
   void _completeSetup() async {
@@ -28,51 +43,99 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       setState(() => _isLoading = true);
       
       try {
-        // Save profile data (mock implementation)
-        await Future.delayed(Duration(seconds: 1));
+        final user = _authService.currentUser;
+        if (user == null) {
+          throw Exception('User must be authenticated to complete profile setup');
+        }
+
+        String? profilePictureUrl;
+        
+        // Upload profile picture if selected
+        if (_profileImage != null && !kIsWeb) {
+          try {
+            profilePictureUrl = await _storageService.uploadProfilePicture(user.uid, _profileImage!);
+          } catch (e) {
+            // Continue even if image upload fails
+            print('Failed to upload profile picture: $e');
+          }
+        }
+
+        // Prepare user profile data
+        final username = _usernameController.text.trim();
+        final userData = {
+          'username': username,
+          'bio': _bioController.text.trim(),
+          'interests': widget.selectedInterests,
+          'goal': widget.selectedGoal,
+          'experienceLevel': widget.experienceLevel,
+          'profilePictureUrl': profilePictureUrl,
+          'createdAt': DateTime.now().toIso8601String(),
+          'updatedAt': DateTime.now().toIso8601String(),
+        };
+
+        // Save profile to Firestore
+        await _firestoreService.createUserProfile(user.uid, userData);
+        
+        // Update Firebase Auth display name with username
+        try {
+          if (username.isNotEmpty) {
+            await user.updateProfile(displayName: username);
+            await user.reload();
+          }
+        } catch (e) {
+          // Continue even if display name update fails
+          print('Failed to update display name: $e');
+        }
         
         // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Profile setup completed successfully!'),
-            backgroundColor: successGreen,
-          ),
-        );
+        ErrorHandler.showSuccess(context, 'Profile setup completed successfully!');
         
         // Navigate to dashboard
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => DashboardScreen()),
-          (route) => false,
-        );
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => DashboardScreen()),
+            (route) => false,
+          );
+        }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Setup failed. Please try again.'),
-            backgroundColor: errorRed,
-          ),
-        );
+        ErrorHandler.showError(context, e);
       } finally {
-        setState(() => _isLoading = false);
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final padding = ResponsiveHelper.getResponsivePadding(context);
+    
     return Scaffold(
-      backgroundColor: softPink,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: IconThemeData(color: primaryPink),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          color: theme.iconTheme.color,
+          onPressed: () => Navigator.pop(context),
+          constraints: BoxConstraints(minWidth: 48, minHeight: 48),
+        ),
         title: Text(
           'Step 4 of 4',
-          style: TextStyle(color: mediumGrey, fontSize: 14),
+          style: TextStyle(
+            color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+            fontSize: 14,
+            fontFamily: 'Lato',
+          ),
         ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(30),
+          padding: padding,
           child: Form(
             key: _formKey,
             child: Column(
@@ -80,37 +143,48 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               children: [
                 Text(
                   'Complete Your Profile',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: darkGrey,
+                  style: theme.textTheme.headlineLarge?.copyWith(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.5,
                   ),
                 ),
-                SizedBox(height: 10),
+                SizedBox(height: 12),
                 Text(
                   'Let the community get to know you',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: mediumGrey,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontSize: 15,
+                    height: 1.4,
                   ),
                 ),
                 SizedBox(height: 40),
-                GestureDetector(
-                  onTap: () {
-                    // Add profile picture
-                  },
-                  child: Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      color: lightPink,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: primaryPink, width: 3),
-                    ),
-                    child: Icon(
-                      Icons.camera_alt,
-                      size: 40,
-                      color: primaryPink,
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _pickProfileImage(),
+                    borderRadius: BorderRadius.circular(60),
+                    child: Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: isDark ? Color(0xFF2D2D2D) : lightPink,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: primaryPink, width: 3),
+                      ),
+                      child: _profileImage != null && !kIsWeb
+                          ? ClipOval(
+                              child: Image.file(
+                                _profileImage!,
+                                width: 120,
+                                height: 120,
+                                fit: BoxFit.cover,
+                              ),
+                            )
+                          : Icon(
+                              Icons.camera_alt,
+                              size: 40,
+                              color: primaryPink,
+                            ),
                     ),
                   ),
                 ),
@@ -148,8 +222,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     alignLabelWithHint: true,
                   ),
                   validator: (value) {
-                    if (value?.isEmpty ?? true) return 'Bio is required';
-                    if (value!.length < 20) return 'Please write at least 20 characters';
+                    // Bio is optional - users can have a bio as small as 1 emoji
                     return null;
                   },
                 ),
@@ -157,19 +230,21 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 Container(
                   padding: EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: white,
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: lightPink),
+                    color: theme.cardColor,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isDark ? Color(0xFF404040) : lightPink,
+                      width: 2,
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Your Profile Summary',
-                        style: TextStyle(
+                        style: theme.textTheme.titleLarge?.copyWith(
                           fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: darkGrey,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       SizedBox(height: 15),
@@ -180,10 +255,16 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   ),
                 ),
                 SizedBox(height: 40),
-                Container(
+                SizedBox(
                   width: double.infinity,
+                  height: 56,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _completeSetup,
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
                     child: _isLoading 
                         ? Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -197,13 +278,25 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                                 ),
                               ),
                               SizedBox(width: 10),
-                              Text('Setting up...', style: TextStyle(fontSize: 16)),
+                              Text(
+                                'Setting up...',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'Lato',
+                                ),
+                              ),
                             ],
                           )
-                        : Text('Complete Setup', style: TextStyle(fontSize: 16)),
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 15),
-                    ),
+                        : Text(
+                            'Complete Setup',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Lato',
+                              letterSpacing: 0.5,
+                            ),
+                          ),
                   ),
                 ),
               ],
@@ -215,6 +308,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   }
 
   Widget _buildSummaryItem(String label, String value) {
+    final theme = Theme.of(context);
     return Padding(
       padding: EdgeInsets.only(bottom: 10),
       child: Row(
@@ -225,16 +319,61 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             style: TextStyle(
               fontWeight: FontWeight.w600,
               color: primaryPink,
+              fontFamily: 'Lato',
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: TextStyle(color: darkGrey),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontFamily: 'Lato',
+              ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _pickProfileImage() async {
+    try {
+      HapticFeedback.selectionClick();
+      
+      if (kIsWeb) {
+        // For web, show a message that image upload will be available soon
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Image upload on web will be available soon. You can add a profile picture later.'),
+              backgroundColor: primaryPink,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+      
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 85,
+      );
+      
+      if (image != null) {
+        setState(() {
+          _profileImage = File(image.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to pick image: ${e.toString()}'),
+            backgroundColor: errorRed,
+          ),
+        );
+      }
+    }
   }
 }

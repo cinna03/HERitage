@@ -151,6 +151,9 @@ class CourseProvider extends ChangeNotifier {
       // Reload progress
       await loadCourse(courseId);
       _error = null;
+      
+      // Notify UserStatsProvider to refresh stats
+      // This will be handled by the provider listening to auth state or we can add a refresh call
     } catch (e) {
       _error = e.toString();
       rethrow;

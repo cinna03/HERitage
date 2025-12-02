@@ -135,10 +135,18 @@ class _EventsScreenState extends State<EventsScreen> with TickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
-      backgroundColor: softPink,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text('Events', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          'Events',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Lato',
+          ),
+        ),
         backgroundColor: primaryPink,
         elevation: 0,
         bottom: TabBar(
@@ -217,15 +225,18 @@ class _EventsScreenState extends State<EventsScreen> with TickerProviderStateMix
   }
 
   Widget _buildEventCard(Event event, String type, EventProvider? eventProvider) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Container(
       margin: EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
-        color: white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(15),
         border: type == 'live' ? Border.all(color: errorRed, width: 2) : null,
         boxShadow: [
           BoxShadow(
-            color: lightPink.withValues(alpha: 0.3),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
             blurRadius: 10,
             offset: Offset(0, 5),
           ),
@@ -322,18 +333,16 @@ class _EventsScreenState extends State<EventsScreen> with TickerProviderStateMix
                 children: [
                   Text(
                     event.title,
-                    style: TextStyle(
+                    style: theme.textTheme.titleLarge?.copyWith(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: darkGrey,
                     ),
                   ),
                   SizedBox(height: 8),
                   Text(
                     event.description,
-                    style: TextStyle(
+                    style: theme.textTheme.bodyMedium?.copyWith(
                       fontSize: 14,
-                      color: mediumGrey,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -356,13 +365,12 @@ class _EventsScreenState extends State<EventsScreen> with TickerProviderStateMix
                   SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.access_time, color: mediumGrey, size: 16),
+                      Icon(Icons.access_time, color: theme.iconTheme.color?.withValues(alpha: 0.6) ?? mediumGrey, size: 16),
                       SizedBox(width: 4),
                       Text(
                         _formatDateTime(event.dateTime, type),
-                        style: TextStyle(
+                        style: theme.textTheme.bodySmall?.copyWith(
                           fontSize: 12,
-                          color: mediumGrey,
                         ),
                       ),
                     ],
@@ -370,14 +378,13 @@ class _EventsScreenState extends State<EventsScreen> with TickerProviderStateMix
                   SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.location_on, color: mediumGrey, size: 16),
+                      Icon(Icons.location_on, color: theme.iconTheme.color?.withValues(alpha: 0.6) ?? mediumGrey, size: 16),
                       SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           event.location,
-                          style: TextStyle(
+                          style: theme.textTheme.bodySmall?.copyWith(
                             fontSize: 12,
-                            color: mediumGrey,
                           ),
                         ),
                       ),
