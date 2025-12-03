@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -51,6 +52,12 @@ class AuthProvider extends ChangeNotifier {
     try {
       final result = await _authService.signUpWithEmail(email, password);
       _user = result?.user;
+      
+      // Create user document in Firestore
+      if (_user != null) {
+        await _createUserDocument(_user!);
+      }
+      
       _error = null;
       return true;
     } catch (e) {
@@ -67,6 +74,12 @@ class AuthProvider extends ChangeNotifier {
     try {
       final result = await _authService.signInWithGoogle();
       _user = result?.user;
+      
+      // Create user document in Firestore if it doesn't exist
+      if (_user != null) {
+        await _createUserDocument(_user!);
+      }
+      
       _error = null;
       return true;
     } catch (e) {
@@ -176,5 +189,31 @@ class AuthProvider extends ChangeNotifier {
   void _setLoading(bool loading) {
     _isLoading = loading;
     notifyListeners();
+  }
+
+  /// Creates or updates user document in Firestore
+  Future<void> _createUserDocument(User user) async {
+    final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+    final docSnapshot = await userDoc.get();
+    
+    // Only create if document doesn't exist
+    if (!docSnapshot.exists) {
+      final username = user.displayName ?? user.email?.split('@')[0] ?? 'User';
+      
+      await userDoc.set({
+        'uid': user.uid,
+        'email': user.email,
+        'username': username,
+        'displayName': user.displayName,
+        'profilePictureUrl': user.photoURL,
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastSeen': FieldValue.serverTimestamp(),
+      });
+    } else {
+      // Update last seen
+      await userDoc.update({
+        'lastSeen': FieldValue.serverTimestamp(),
+      });
+    }
   }
 }

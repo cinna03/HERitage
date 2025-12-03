@@ -378,4 +378,3 @@ class _AddEventScreenState extends State<AddEventScreen> {
     }
   }
 }
-

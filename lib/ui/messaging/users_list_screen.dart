@@ -170,4 +170,3 @@ class UsersListScreen extends StatelessWidget {
     );
   }
 }
-

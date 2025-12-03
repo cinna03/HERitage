@@ -4,34 +4,96 @@ Online E-Learning App for Empowering African Women in Arts
 
 # Screenshots
 
+This section outlines all the screenshots that should be included in the README to showcase the app's features and setup process.
+
+## Setup Screenshots
+
+These screenshots help users understand the setup process:
+
+### Firebase Console Setup
+1. **Firebase Project Creation**: Screenshot of Firebase Console showing project creation
+2. **Firebase Project Settings**: Screenshot showing the project settings page with app configuration
+3. **Authentication Setup**: Screenshot of Authentication > Sign-in method showing Email/Password and Google enabled
+4. **Firestore Database Creation**: Screenshot showing Firestore database creation and location selection
+5. **Firestore Security Rules**: Screenshot of the Firestore Rules editor (optional, but helpful)
+6. **FlutterFire CLI Configuration**: Terminal screenshot showing `flutterfire configure` command execution
+7. **Android Configuration**: Screenshot showing `google-services.json` file location in project structure
+8. **iOS Configuration**: Screenshot showing `GoogleService-Info.plist` file location in project structure
+
+### Development Setup
+9. **Flutter Installation Check**: Terminal screenshot showing `flutter doctor` output
+10. **Dependencies Installation**: Terminal screenshot showing `flutter pub get` execution
+11. **App Running**: Screenshot of the app running on emulator/device (splash screen or first screen)
+
 ## App Screenshots
 
 The following screenshots demonstrate the key features of the HERmony app:
 
 ### Authentication & Onboarding
-- **Create Account Screen**: User registration with email/password validation
-- **Login Screen**: Email/password and Google Sign-In options with password reset
-- **Email Verification Screen**: Email verification flow after signup
-- **Onboarding Screens**: Interest selection, experience level, and goal setting
+1. **Welcome Screen**: Initial welcome screen with app branding
+2. **Login Screen**: Email/password and Google Sign-In options with password reset link
+3. **Create Account Screen**: User registration form with email/password validation
+4. **Email Verification Screen**: Email verification prompt after signup
+5. **Forgot Password Screen**: Password reset flow
+6. **Interest Selection Screen**: Onboarding screen for selecting user interests
+7. **Experience Level Screen**: Onboarding screen for selecting experience level
+8. **Goal Setting Screen**: Onboarding screen for setting learning goals
+9. **Profile Setup Screen**: Initial profile creation screen
 
-### Main App Features
-- **Home/Dashboard Screen**: Personalized dashboard with quick actions, featured courses, and progress tracking
-- **Courses Screen**: Browse and search courses by category with filtering
-- **Course Detail Screen**: Course information, enrollment, and progress tracking
-- **Course Content Screen**: Lesson navigation and completion tracking
-- **Community/Forum Screen**: Real-time forum posts, chat rooms, and mentors
-- **Chat Room Screen**: Real-time messaging within chat rooms
-- **Events Screen**: Upcoming, live, and past events with RSVP functionality
-- **Profile Screen**: User profile with statistics and settings
+### Main App Features - Dashboard & Navigation
+10. **Home/Dashboard Screen**: Personalized dashboard with quick actions, featured courses, and progress tracking
+11. **Bottom Navigation Bar**: Screenshot showing the main navigation (Home, Courses, Community, Events, Profile)
+12. **Dashboard - Calendar Tab**: Calendar view with events and reminders
+13. **Dashboard - Statistics**: User statistics and progress overview
+
+### Courses & Learning
+14. **Courses Screen**: Browse and search courses by category with filtering options
+15. **Course Detail Screen**: Course information, enrollment button, instructor details, and progress tracking
+16. **Course Content Screen**: Lesson list with navigation and completion tracking
+17. **Single Lesson Screen**: Individual lesson view with video/content and navigation
+18. **Course Progress**: Screenshot showing course completion progress
+
+### Community & Social
+19. **Community/Forum Screen**: Real-time forum posts list with categories
+20. **Forum Post Detail**: Individual post with comments and interactions
+21. **Create Post Screen**: Post creation form
+22. **Chat Rooms Screen**: List of available chat rooms
+23. **Chat Room Screen**: Real-time messaging within a chat room
+24. **Direct Messaging Screen**: User search and direct message conversations
+25. **Mentors Screen**: List of available mentors
+
+### Events
+26. **Events Screen**: Upcoming, live, and past events with filtering
+27. **Event Detail Screen**: Event information with RSVP functionality
+28. **Add Event Screen**: Event creation form
+
+### Profile & Settings
+29. **Profile Screen**: User profile with statistics, achievements, and edit options
+30. **Settings Screen**: Settings menu with theme, language, and notification preferences
+31. **Notifications Screen**: List of user notifications
+32. **User Statistics**: Detailed statistics view
 
 ### Design Features
-- **Responsive Design**: Works on phones (≤5.5") and tablets (≥6.7")
-- **Dark/Light Theme**: Theme switching with persistence
-- **Material Design**: Follows Material Design guidelines with proper tap targets
+33. **Dark Theme**: Screenshot showing the app in dark mode (any main screen)
+34. **Light Theme**: Screenshot showing the app in light mode (same screen as dark theme for comparison)
+35. **Responsive Design - Phone**: Screenshot on a phone (≤5.5") showing mobile layout
+36. **Responsive Design - Tablet**: Screenshot on a tablet (≥6.7") showing tablet layout
+37. **Material Design Elements**: Close-up screenshot showing Material Design components (buttons, cards, etc.)
 
-> **Note:** To add screenshots, place image files in the `docs/screenshots/` directory and reference them using markdown image syntax:
+## Screenshot Organization
+
+> **Note:** Place all screenshot files in the `docs/screenshots/` directory with descriptive filenames:
+> - Setup screenshots: `setup_firebase_project.png`, `setup_auth_enabled.png`, etc.
+> - App screenshots: `welcome_screen.png`, `login_screen.png`, `dashboard_screen.png`, etc.
+> 
+> Reference them in markdown using:
 > ```markdown
-> ![Create Account](docs/screenshots/create_account.png) | ![Login](docs/screenshots/login.png)
+> ![Description](docs/screenshots/filename.png)
+> ```
+> 
+> For side-by-side comparisons:
+> ```markdown
+> ![Light Theme](docs/screenshots/light_theme.png) | ![Dark Theme](docs/screenshots/dark_theme.png)
 > ```
 
 ## Getting Started

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:coursehub/utils/index.dart';
+import 'package:coursehub/utils/theme_provider.dart';
 import '../auth/login_screen.dart';
 import '../settings/settings_screen.dart';
 import '../../providers/auth_provider.dart';
@@ -77,6 +78,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             actions: [
+              Consumer<ThemeProvider>(
+                builder: (context, themeProvider, child) {
+                  return IconButton(
+                    onPressed: themeProvider.toggleTheme,
+                    icon: Icon(
+                      themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                      color: white,
+                    ),
+                    tooltip: 'Toggle theme',
+                  );
+                },
+              ),
               IconButton(
                 onPressed: () => _showSettingsMenu(),
                 icon: Icon(Icons.settings, color: white),

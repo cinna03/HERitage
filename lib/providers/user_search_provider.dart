@@ -74,4 +74,3 @@ class UserSearchProvider extends ChangeNotifier {
     super.dispose();
   }
 }
-

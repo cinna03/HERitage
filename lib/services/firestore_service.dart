@@ -14,11 +14,10 @@ class FirestoreService {
   }
 
   /// Gets all posts ordered by timestamp (newest first) as a real-time stream
-  /// Uses cache-first approach: loads from cache immediately, then syncs with server
   Stream<QuerySnapshot> getPosts() {
     return _db.collection('posts')
         .orderBy('timestamp', descending: true)
-        .snapshots(includeMetadataChanges: false);
+        .snapshots();
   }
 
   /// Updates a post with new data

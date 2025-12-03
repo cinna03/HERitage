@@ -8,12 +8,15 @@ import '../../providers/user_stats_provider.dart';
 import '../../providers/forum_provider.dart';
 import '../../providers/event_provider.dart';
 import '../../providers/course_provider.dart';
+import '../../providers/notification_provider.dart';
 import 'home_tab.dart';
 import '../courses/courses_screen.dart';
 import '../community/community_screen.dart';
 import '../events/events_screen.dart';
 import '../profile/profile_screen.dart';
 import '../messaging/messaging_screen.dart';
+import '../calendar/calendar_screen.dart';
+import '../notifications/notifications_screen.dart';
 import '../auth/login_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -30,6 +33,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     CoursesScreen(),
     CommunityScreen(),
     EventsScreen(),
+    CalendarScreen(),
     MessagingScreen(),
     ProfileScreen(),
   ];
@@ -69,6 +73,54 @@ class _DashboardScreenState extends State<DashboardScreen> {
         elevation: 0,
         automaticallyImplyLeading: false,
         actions: [
+          Consumer<NotificationProvider>(
+            builder: (context, notificationProvider, child) {
+              return Stack(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => NotificationsScreen(),
+                        ),
+                      );
+                    },
+                    icon: Icon(
+                      Icons.notifications,
+                      color: primaryPink,
+                    ),
+                    constraints: BoxConstraints(minWidth: 48, minHeight: 48),
+                  ),
+                  if (notificationProvider.unreadCount > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        constraints: BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          '${notificationProvider.unreadCount}',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
           Consumer<ThemeProvider>(
             builder: (context, themeProvider, child) {
               return IconButton(
@@ -133,8 +185,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               label: 'Events',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.message),
-              label: 'Messages',
+              icon: Icon(Icons.calendar_today),
+              label: 'Calendar',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.chat),
+              label: 'Chat',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person),

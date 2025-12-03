@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/firestore_service.dart';
+import '../services/preferences_service.dart';
+import '../services/notification_service.dart';
 
 /// Provider for managing forum posts and comments
 /// Handles real-time updates, post creation, likes, and comments
@@ -43,13 +46,11 @@ class ForumProvider extends ChangeNotifier {
     }, onError: (error) {
       _error = error.toString();
       _isLoading = false;
-      print('Error loading posts: $error');
       notifyListeners();
     });
   }
 
   /// Refreshes posts from Firestore
-  /// Call this method to ensure data is loaded after app restart
   void refresh() {
     _loadPosts();
   }
@@ -84,6 +85,17 @@ class ForumProvider extends ChangeNotifier {
         'comments': 0,
         'createdAt': DateTime.now().toIso8601String(),
       });
+
+      // Send notification to followers if post notifications are enabled
+      final postNotificationsEnabled = await PreferencesService.getPostNotifications();
+      if (postNotificationsEnabled) {
+        await NotificationService.showNotification(
+          id: DateTime.now().millisecondsSinceEpoch,
+          title: 'New post by $author',
+          body: title,
+        );
+      }
+      
       _error = null;
     } catch (e) {
       _error = e.toString();

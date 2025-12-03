@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:coursehub/utils/index.dart';
 import '../../services/firestore_service.dart';
 import '../../providers/auth_provider.dart' as app_auth;
+import '../../providers/chat_provider.dart';
 import '../../utils/error_handler.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -89,7 +90,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _sendMessage() async {
-    if (_messageController.text.trim().isEmpty) return;
+    final messageText = _messageController.text.trim();
+    if (messageText.isEmpty) return;
 
     final user = _auth.currentUser;
     if (user == null) {
@@ -97,25 +99,28 @@ class _ChatScreenState extends State<ChatScreen> {
       return;
     }
 
+    // Clear input immediately for better UX
+    _messageController.clear();
+
     try {
       await _firestoreService.sendDirectMessage(
         widget.conversationId,
         {
-          'text': _messageController.text.trim(),
+          'text': messageText,
           'senderId': user.uid,
-          'senderName': user.displayName ?? user.email?.split('@')[0] ?? 'You',
+          'senderName': user.displayName ?? user.email?.split('@')[0] ?? 'Anonymous',
           'timestamp': FieldValue.serverTimestamp(),
           'createdAt': DateTime.now().toIso8601String(),
         },
       );
-
-      _messageController.clear();
       
       // Scroll to bottom after sending
       Future.delayed(Duration(milliseconds: 100), () {
         _scrollToBottom();
       });
     } catch (e) {
+      // Restore message text if sending failed
+      _messageController.text = messageText;
       ErrorHandler.showError(context, 'Failed to send message: $e');
     }
   }
@@ -130,6 +135,10 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: white),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Row(
           children: [
             CircleAvatar(

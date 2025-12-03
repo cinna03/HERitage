@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:coursehub/utils/index.dart';
-import '../../models/event.dart';
+import '../../models/event.dart' as AppEvent;
 
 class EventDetailScreen extends StatefulWidget {
-  final Event event;
+  final AppEvent.Event event;
   final String eventType;
 
   EventDetailScreen({required this.event, required this.eventType});

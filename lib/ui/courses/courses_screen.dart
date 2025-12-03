@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:coursehub/utils/index.dart';
+import 'package:coursehub/utils/theme_provider.dart';
 import '../../widgets/loading_overlay.dart';
 import '../../providers/course_provider.dart';
 import '../../models/course.dart';
@@ -36,6 +37,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: white),
+          onPressed: () => Navigator.of(context).canPop() ? Navigator.pop(context) : null,
+        ),
         title: Text(
           'Courses',
           style: TextStyle(
@@ -45,6 +50,20 @@ class _CoursesScreenState extends State<CoursesScreen> {
         ),
         backgroundColor: primaryPink,
         elevation: 0,
+        actions: [
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, child) {
+              return IconButton(
+                onPressed: themeProvider.toggleTheme,
+                icon: Icon(
+                  themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                  color: white,
+                ),
+                tooltip: 'Toggle theme',
+              );
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [

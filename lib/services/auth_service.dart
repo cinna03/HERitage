@@ -9,9 +9,8 @@ class AuthService {
   
   // Configure GoogleSignIn with web client ID when running on web
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    // For web, use the client ID from Firebase Console
-    // This should match the OAuth 2.0 Client ID for your web app
-    clientId: kIsWeb ? '597720652794-21e0bfd77addcd2d042243.apps.googleusercontent.com' : null,
+    // Use the correct web client ID from Firebase configuration
+    clientId: kIsWeb ? '597720652794-m8rqnlpl8615rvftgddrn3sr5jg3bnoi.apps.googleusercontent.com' : null,
     scopes: ['email', 'profile'],
   );
 

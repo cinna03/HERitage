@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/firestore_service.dart';
+import '../services/preferences_service.dart';
+import '../services/notification_service.dart';
 
 /// Provider for managing chat rooms and messages
 /// Handles real-time chat updates, message sending, and chat room creation
@@ -99,6 +101,58 @@ class ChatProvider extends ChangeNotifier {
         'timestamp': FieldValue.serverTimestamp(),
         'createdAt': DateTime.now().toIso8601String(),
       });
+      _error = null;
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Sends a direct message and creates notification
+  Future<void> sendDirectMessage(String conversationId, String text, String otherUserId) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User must be authenticated to send messages');
+      }
+
+      await _firestoreService.sendDirectMessage(conversationId, {
+        'text': text,
+        'senderId': user.uid,
+        'senderName': user.displayName ?? user.email ?? 'Anonymous',
+        'timestamp': FieldValue.serverTimestamp(),
+        'createdAt': DateTime.now().toIso8601String(),
+      });
+
+      // Send notification to other user if chat notifications are enabled
+      final chatNotificationsEnabled = await PreferencesService.getChatNotifications();
+      if (chatNotificationsEnabled) {
+        await _firestoreService.createNotification(otherUserId, {
+          'type': 'message',
+          'conversationId': conversationId,
+          'fromUserId': user.uid,
+          'fromUserName': user.displayName ?? user.email?.split('@')[0] ?? 'Someone',
+          'messageText': text,
+          'timestamp': FieldValue.serverTimestamp(),
+          'read': false,
+          'createdAt': DateTime.now().toIso8601String(),
+        });
+
+        // Show local notification
+        await NotificationService.showNotification(
+          id: DateTime.now().millisecondsSinceEpoch,
+          title: 'New message from ${user.displayName ?? 'Someone'}',
+          body: text,
+        );
+      }
+      
       _error = null;
     } catch (e) {
       _error = e.toString();

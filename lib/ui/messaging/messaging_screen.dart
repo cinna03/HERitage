@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:coursehub/utils/index.dart';
+import 'package:coursehub/utils/theme_provider.dart';
 import '../../services/firestore_service.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/user_search_provider.dart';
 import '../../utils/error_handler.dart';
 import 'chat_screen.dart';
+import 'users_list_screen.dart';
 
 class MessagingScreen extends StatefulWidget {
   final Map<String, dynamic>? sharePostData; // Optional post data to share
@@ -16,25 +19,27 @@ class MessagingScreen extends StatefulWidget {
   _MessagingScreenState createState() => _MessagingScreenState();
 }
 
-class _MessagingScreenState extends State<MessagingScreen> {
+class _MessagingScreenState extends State<MessagingScreen> with TickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final FirestoreService _firestoreService = FirestoreService();
-  String _searchQuery = '';
   bool _isSearching = false;
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 1, vsync: this);
     _searchController.addListener(() {
-      setState(() {
-        _searchQuery = _searchController.text.toLowerCase();
-      });
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final searchProvider = Provider.of<UserSearchProvider>(context, listen: false);
+      searchProvider.searchUsers(_searchController.text, authProvider.user?.uid ?? '');
     });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -47,7 +52,7 @@ class _MessagingScreenState extends State<MessagingScreen> {
     if (currentUserId == null) {
       return Scaffold(
         appBar: AppBar(
-          title: Text('Messages'),
+          title: Text('Chat'),
           backgroundColor: primaryPink,
         ),
         body: Center(
@@ -59,8 +64,12 @@ class _MessagingScreenState extends State<MessagingScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: white),
+          onPressed: () => Navigator.of(context).canPop() ? Navigator.pop(context) : null,
+        ),
         title: Text(
-          'Messages',
+          'Chat',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontFamily: 'Lato',
@@ -76,11 +85,33 @@ class _MessagingScreenState extends State<MessagingScreen> {
                 _isSearching = !_isSearching;
                 if (!_isSearching) {
                   _searchController.clear();
+                  Provider.of<UserSearchProvider>(context, listen: false).clearSearch();
                 }
               });
             },
           ),
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, child) {
+              return IconButton(
+                onPressed: themeProvider.toggleTheme,
+                icon: Icon(
+                  themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                  color: white,
+                ),
+                tooltip: 'Toggle theme',
+              );
+            },
+          ),
         ],
+        bottom: _isSearching ? null : TabBar(
+          controller: _tabController,
+          indicatorColor: white,
+          labelColor: white,
+          unselectedLabelColor: white.withOpacity(0.7),
+          tabs: [
+            Tab(text: 'Conversations'),
+          ],
+        ),
       ),
       body: Column(
         children: [
@@ -88,7 +119,12 @@ class _MessagingScreenState extends State<MessagingScreen> {
           Expanded(
             child: _isSearching
                 ? _buildUserSearchResults(currentUserId, theme)
-                : _buildConversationsList(currentUserId, theme),
+                : TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildConversationsList(currentUserId, theme),
+                    ],
+                  ),
           ),
         ],
       ),
@@ -105,11 +141,12 @@ class _MessagingScreenState extends State<MessagingScreen> {
         decoration: InputDecoration(
           hintText: 'Search users by username...',
           prefixIcon: Icon(Icons.search, color: primaryPink),
-          suffixIcon: _searchQuery.isNotEmpty
+          suffixIcon: _searchController.text.isNotEmpty
               ? IconButton(
                   icon: Icon(Icons.clear),
                   onPressed: () {
                     _searchController.clear();
+                    Provider.of<UserSearchProvider>(context, listen: false).clearSearch();
                   },
                 )
               : null,
@@ -129,61 +166,38 @@ class _MessagingScreenState extends State<MessagingScreen> {
   }
 
   Widget _buildUserSearchResults(String currentUserId, ThemeData theme) {
-    if (_searchQuery.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search, size: 64, color: mediumGrey),
-            SizedBox(height: 16),
-            Text(
-              'Search for users',
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: mediumGrey,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Type a username to find and message users',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: mediumGrey,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return StreamBuilder<QuerySnapshot>(
-      stream: _firestoreService.searchUsers(_searchQuery),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-          return Center(child: CircularProgressIndicator(color: primaryPink));
-        }
-
-        if (snapshot.hasError) {
+    return Consumer<UserSearchProvider>(
+      builder: (context, searchProvider, child) {
+        if (searchProvider.searchQuery.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.error_outline, size: 64, color: errorRed),
+                Icon(Icons.search, size: 64, color: mediumGrey),
                 SizedBox(height: 16),
                 Text(
-                  'Error loading users',
-                  style: theme.textTheme.titleMedium,
+                  'Search for users',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: mediumGrey,
+                  ),
                 ),
                 SizedBox(height: 8),
                 Text(
-                  snapshot.error.toString(),
-                  style: theme.textTheme.bodySmall,
-                  textAlign: TextAlign.center,
+                  'Type a username to find and message users',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: mediumGrey,
+                  ),
                 ),
               ],
             ),
           );
         }
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        if (searchProvider.isLoading) {
+          return Center(child: CircularProgressIndicator(color: primaryPink));
+        }
+
+        if (searchProvider.searchResults.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -208,35 +222,12 @@ class _MessagingScreenState extends State<MessagingScreen> {
           );
         }
 
-        // Filter users in memory: exclude current user and match username (case-insensitive)
-        final queryLower = _searchQuery.toLowerCase();
-        final users = snapshot.data!.docs.where((doc) {
-          final userId = doc.id;
-          if (userId == currentUserId) return false; // Exclude current user
-          
-          final userData = doc.data() as Map<String, dynamic>;
-          final username = (userData['username'] ?? '').toString().toLowerCase();
-          
-          // Case-insensitive search
-          return username.contains(queryLower);
-        }).toList();
-
-        if (users.isEmpty) {
-          return Center(
-            child: Text(
-              'No other users found',
-              style: theme.textTheme.bodyMedium,
-            ),
-          );
-        }
-
         return ListView.builder(
           padding: EdgeInsets.all(16),
-          itemCount: users.length,
+          itemCount: searchProvider.searchResults.length,
           itemBuilder: (context, index) {
-            final userDoc = users[index];
-            final userData = userDoc.data() as Map<String, dynamic>;
-            final userId = userDoc.id;
+            final userData = searchProvider.searchResults[index];
+            final userId = userData['id'] as String;
             final username = userData['username'] as String? ?? 'Unknown';
             final email = userData['email'] as String? ?? '';
             final profilePictureUrl = userData['profilePictureUrl'] as String?;
@@ -333,10 +324,107 @@ class _MessagingScreenState extends State<MessagingScreen> {
     );
   }
 
-  Widget _buildConversationsList(String currentUserId, ThemeData theme) {
+  Widget _buildAllUsersList(String currentUserId, ThemeData theme) {
     return StreamBuilder<QuerySnapshot>(
-      stream: _firestoreService.getUserConversations(currentUserId),
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .snapshots(),
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator(color: primaryPink));
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 64, color: errorRed),
+                SizedBox(height: 16),
+                Text('Error loading users'),
+                SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => setState(() {}),
+                  child: Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.people_outline, size: 64, color: mediumGrey),
+                SizedBox(height: 16),
+                Text(
+                  'No other users found',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: mediumGrey,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final users = snapshot.data!.docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final uid = data['uid'] as String? ?? doc.id;
+          return uid != currentUserId;
+        }).toList();
+        
+        // Sort users alphabetically by username on client side
+        users.sort((a, b) {
+          final aData = a.data() as Map<String, dynamic>;
+          final bData = b.data() as Map<String, dynamic>;
+          final aUsername = (aData['username'] as String?) ?? (aData['displayName'] as String?) ?? '';
+          final bUsername = (bData['username'] as String?) ?? (bData['displayName'] as String?) ?? '';
+          return aUsername.toLowerCase().compareTo(bUsername.toLowerCase());
+        });
+
+        return ListView.builder(
+          padding: EdgeInsets.all(16),
+          itemCount: users.length,
+          itemBuilder: (context, index) {
+            final userData = users[index].data() as Map<String, dynamic>;
+            final userId = userData['uid'] as String? ?? users[index].id;
+            final username = userData['username'] as String? ?? userData['displayName'] as String? ?? 'Unknown';
+            final email = userData['email'] as String? ?? '';
+            final profilePictureUrl = userData['profilePictureUrl'] as String?;
+
+            return _buildUserCard(
+              userId,
+              username,
+              email,
+              profilePictureUrl,
+              theme,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildConversationsList(String currentUserId, ThemeData theme) {
+    print('DEBUG: Building conversations list for user: $currentUserId');
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('conversations')
+          .snapshots(),
+      builder: (context, snapshot) {
+        print('DEBUG: Snapshot state: ${snapshot.connectionState}');
+        print('DEBUG: Has data: ${snapshot.hasData}');
+        if (snapshot.hasData) {
+          print('DEBUG: Total conversations: ${snapshot.data!.docs.length}');
+          for (var doc in snapshot.data!.docs) {
+            final data = doc.data() as Map<String, dynamic>;
+            print('DEBUG: Conversation ${doc.id}: participants=${data['participants']}');
+          }
+        }
+        
         // Show loading only for initial load, not for subsequent updates
         if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
           return Center(child: CircularProgressIndicator(color: primaryPink));
@@ -420,7 +508,14 @@ class _MessagingScreenState extends State<MessagingScreen> {
           );
         }
 
-        final conversations = snapshot.data!.docs;
+        final allConversations = snapshot.data!.docs;
+        final conversations = allConversations.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final participants = (data['participants'] as List<dynamic>?) ?? [];
+          return participants.contains(currentUserId);
+        }).toList();
+        
+        print('DEBUG: Filtered conversations for user: ${conversations.length}');
         
         // Sort conversations by lastMessageTime in memory (in case query ordering fails)
         final sortedConversations = List.from(conversations);
@@ -478,11 +573,26 @@ class _MessagingScreenState extends State<MessagingScreen> {
                 }
                 
                 if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
-                  return SizedBox.shrink();
+                  // Try to get name from posts if user profile doesn't exist
+                  return FutureBuilder<String>(
+                    future: _getNameFromPosts(otherUserId),
+                    builder: (context, nameSnapshot) {
+                      final username = nameSnapshot.data ?? 'Unknown User';
+                      return _buildConversationCard(
+                        conversationId,
+                        otherUserId,
+                        username,
+                        null,
+                        lastMessage,
+                        lastMessageTime,
+                        theme,
+                      );
+                    },
+                  );
                 }
 
                 final userData = userSnapshot.data!.data() as Map<String, dynamic>? ?? {};
-                final username = userData['username'] as String? ?? 'Unknown';
+                final username = userData['displayName'] as String? ?? userData['username'] as String? ?? userData['email']?.split('@')[0] ?? 'Unknown';
                 final profilePictureUrl = userData['profilePictureUrl'] as String?;
 
                 return _buildConversationCard(
@@ -582,6 +692,24 @@ class _MessagingScreenState extends State<MessagingScreen> {
         },
       ),
     );
+  }
+
+  Future<String> _getNameFromPosts(String userId) async {
+    try {
+      final postsSnapshot = await FirebaseFirestore.instance
+          .collection('posts')
+          .where('userId', isEqualTo: userId)
+          .limit(1)
+          .get();
+      
+      if (postsSnapshot.docs.isNotEmpty) {
+        final postData = postsSnapshot.docs.first.data();
+        return postData['author'] as String? ?? 'Unknown User';
+      }
+    } catch (e) {
+      print('Error getting name from posts: $e');
+    }
+    return 'Unknown User';
   }
 
   String _formatTimestamp(Timestamp timestamp) {

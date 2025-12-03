@@ -102,4 +102,3 @@ class NotificationProvider extends ChangeNotifier {
     super.dispose();
   }
 }
-

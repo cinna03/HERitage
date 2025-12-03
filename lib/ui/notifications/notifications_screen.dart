@@ -1,77 +1,61 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:coursehub/utils/index.dart';
-import '../../services/firestore_service.dart';
+import '../../providers/notification_provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../utils/error_handler.dart';
 
-class NotificationsScreen extends StatelessWidget {
+class NotificationsScreen extends StatefulWidget {
+  @override
+  _NotificationsScreenState createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<NotificationProvider>(context, listen: false).refresh();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final userId = authProvider.user?.uid;
-    
-    if (userId == null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text('Notifications'),
-          backgroundColor: primaryPink,
-        ),
-        body: Center(
-          child: Text('Please log in to view notifications'),
-        ),
-      );
-    }
-    
-    final firestoreService = FirestoreService();
+    final isDark = theme.brightness == Brightness.dark;
     
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           'Notifications',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontFamily: 'Lato',
-          ),
+          style: TextStyle(fontFamily: 'Lato'),
         ),
         backgroundColor: primaryPink,
-        elevation: 0,
+        actions: [
+          Consumer<NotificationProvider>(
+            builder: (context, notificationProvider, child) {
+              return notificationProvider.unreadCount > 0
+                  ? TextButton(
+                      onPressed: () {
+                        notificationProvider.markAllAsRead();
+                      },
+                      child: Text(
+                        'Mark All Read',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    )
+                  : SizedBox.shrink();
+            },
+          ),
+        ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: firestoreService.getUserNotifications(userId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-              child: CircularProgressIndicator(color: primaryPink),
-            );
+      body: Consumer<NotificationProvider>(
+        builder: (context, notificationProvider, child) {
+          if (notificationProvider.isLoading) {
+            return Center(child: CircularProgressIndicator(color: primaryPink));
           }
-          
-          if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 64, color: errorRed),
-                  SizedBox(height: 16),
-                  Text(
-                    'Error loading notifications',
-                    style: theme.textTheme.titleMedium,
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    snapshot.error.toString(),
-                    style: theme.textTheme.bodySmall,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            );
-          }
-          
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+
+          if (notificationProvider.notifications.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -90,7 +74,7 @@ class NotificationsScreen extends StatelessWidget {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'You\'ll see notifications here when people interact with your posts',
+                    'You\'ll see notifications for posts, messages, and events here',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: mediumGrey,
                     ),
@@ -100,146 +84,211 @@ class NotificationsScreen extends StatelessWidget {
               ),
             );
           }
-          
-          final notifications = snapshot.data!.docs;
-          
+
           return ListView.builder(
             padding: EdgeInsets.all(16),
-            itemCount: notifications.length,
+            itemCount: notificationProvider.notifications.length,
             itemBuilder: (context, index) {
-              final notificationData = notifications[index].data() as Map<String, dynamic>;
-              final type = notificationData['type'] as String? ?? 'unknown';
-              final fromUserName = notificationData['fromUserName'] as String? ?? 'Someone';
-              final postTitle = notificationData['postTitle'] as String? ?? 'Post';
-              final timestamp = notificationData['timestamp'];
-              final read = notificationData['read'] as bool? ?? false;
-              final commentText = notificationData['commentText'] as String?;
-              
-              return Container(
-                margin: EdgeInsets.only(bottom: 12),
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: read 
-                      ? theme.cardColor.withValues(alpha: 0.5)
-                      : theme.cardColor,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: read 
-                        ? Colors.transparent
-                        : primaryPink.withValues(alpha: 0.3),
-                    width: read ? 0 : 1,
-                  ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: _getNotificationColor(type).withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        _getNotificationIcon(type),
-                        color: _getNotificationColor(type),
-                        size: 24,
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _getNotificationMessage(type, fromUserName, postTitle, commentText),
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              fontWeight: read ? FontWeight.normal : FontWeight.w600,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            _formatTimestamp(timestamp),
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: mediumGrey,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (!read)
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: primaryPink,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                  ],
-                ),
-              );
+              final notification = notificationProvider.notifications[index];
+              return _buildNotificationCard(notification, theme, isDark);
             },
           );
         },
       ),
     );
   }
-  
+
+  Widget _buildNotificationCard(
+    Map<String, dynamic> notification,
+    ThemeData theme,
+    bool isDark,
+  ) {
+    final isRead = notification['read'] ?? false;
+    final type = notification['type'] ?? 'general';
+    final title = _getNotificationTitle(notification);
+    final body = _getNotificationBody(notification);
+    final timestamp = _formatTimestamp(notification['createdAt']);
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: isRead 
+            ? theme.cardColor 
+            : primaryPink.withValues(alpha: isDark ? 0.1 : 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: isRead 
+            ? null 
+            : Border.all(color: primaryPink.withValues(alpha: 0.3), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
+            blurRadius: 5,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ListTile(
+        contentPadding: EdgeInsets.all(16),
+        leading: Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            color: _getNotificationColor(type).withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            _getNotificationIcon(type),
+            color: _getNotificationColor(type),
+          ),
+        ),
+        title: Text(
+          title,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(height: 4),
+            Text(
+              body,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: isRead ? mediumGrey : null,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            SizedBox(height: 8),
+            Text(
+              timestamp,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: mediumGrey,
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
+        trailing: !isRead
+            ? Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: primaryPink,
+                  shape: BoxShape.circle,
+                ),
+              )
+            : null,
+        onTap: () {
+          if (!isRead) {
+            Provider.of<NotificationProvider>(context, listen: false)
+                .markAsRead(notification['id']);
+          }
+          _handleNotificationTap(notification);
+        },
+      ),
+    );
+  }
+
+  String _getNotificationTitle(Map<String, dynamic> notification) {
+    final type = notification['type'] ?? 'general';
+    final fromUserName = notification['fromUserName'] ?? 'Someone';
+    
+    switch (type) {
+      case 'like':
+        return '$fromUserName liked your post';
+      case 'comment':
+        return '$fromUserName commented on your post';
+      case 'message':
+        return 'New message from $fromUserName';
+      case 'event':
+        return 'Event reminder';
+      default:
+        return notification['title'] ?? 'Notification';
+    }
+  }
+
+  String _getNotificationBody(Map<String, dynamic> notification) {
+    final type = notification['type'] ?? 'general';
+    
+    switch (type) {
+      case 'like':
+        return notification['postTitle'] ?? 'Your post';
+      case 'comment':
+        return notification['commentText'] ?? 'New comment on your post';
+      case 'message':
+        return notification['messageText'] ?? 'You have a new message';
+      case 'event':
+        return notification['body'] ?? 'You have an upcoming event';
+      default:
+        return notification['body'] ?? 'You have a new notification';
+    }
+  }
+
   IconData _getNotificationIcon(String type) {
     switch (type) {
       case 'like':
         return Icons.favorite;
       case 'comment':
         return Icons.comment;
-      case 'share':
-        return Icons.share;
+      case 'message':
+        return Icons.message;
+      case 'event':
+        return Icons.event;
       default:
         return Icons.notifications;
     }
   }
-  
+
   Color _getNotificationColor(String type) {
     switch (type) {
       case 'like':
-        return errorRed;
+        return Colors.red;
       case 'comment':
+        return Colors.blue;
+      case 'message':
         return primaryPink;
-      case 'share':
-        return successGreen;
+      case 'event':
+        return Colors.orange;
       default:
-        return mediumGrey;
+        return primaryPink;
     }
   }
-  
-  String _getNotificationMessage(String type, String fromUserName, String postTitle, String? commentText) {
-    switch (type) {
-      case 'like':
-        return '$fromUserName liked your post "$postTitle"';
-      case 'comment':
-        return '$fromUserName commented on your post "$postTitle"${commentText != null ? ': "$commentText"' : ''}';
-      case 'share':
-        return '$fromUserName shared your post "$postTitle"';
-      default:
-        return 'New notification';
-    }
-  }
-  
-  String _formatTimestamp(dynamic timestamp) {
+
+  String _formatTimestamp(String? timestamp) {
     if (timestamp == null) return 'Just now';
-    if (timestamp is Timestamp) {
-      final dateTime = timestamp.toDate();
+    
+    try {
+      final dateTime = DateTime.parse(timestamp);
       final now = DateTime.now();
       final difference = now.difference(dateTime);
-      
+
       if (difference.inMinutes < 1) return 'Just now';
       if (difference.inHours < 1) return '${difference.inMinutes}m ago';
       if (difference.inDays < 1) return '${difference.inHours}h ago';
       if (difference.inDays < 7) return '${difference.inDays}d ago';
       return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+    } catch (e) {
+      return 'Just now';
     }
-    return timestamp.toString();
+  }
+
+  void _handleNotificationTap(Map<String, dynamic> notification) {
+    final type = notification['type'] ?? 'general';
+    
+    switch (type) {
+      case 'like':
+      case 'comment':
+        // Navigate to post details
+        break;
+      case 'message':
+        // Navigate to chat
+        break;
+      case 'event':
+        // Navigate to calendar or event details
+        break;
+      default:
+        break;
+    }
   }
 }
-

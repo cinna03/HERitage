@@ -12,6 +12,9 @@ import 'providers/course_provider.dart';
 import 'providers/event_provider.dart';
 import 'providers/user_stats_provider.dart';
 import 'providers/user_profile_provider.dart';
+import 'providers/user_search_provider.dart';
+import 'providers/notification_provider.dart';
+import 'services/notification_service.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -35,6 +38,9 @@ void main() async {
     print('⚠️ Firestore persistence: $e');
   }
   
+  // Initialize notification service
+  await NotificationService.initialize();
+  
   // Now run the app - all Firestore references created after this point will use persistence
   runApp(HERmonyApp());
 }
@@ -57,6 +63,8 @@ class _HERmonyAppState extends State<HERmonyApp> {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => UserStatsProvider()),
         ChangeNotifierProvider(create: (_) => UserProfileProvider()),
+        ChangeNotifierProvider(create: (_) => UserSearchProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {

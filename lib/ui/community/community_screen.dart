@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:coursehub/utils/index.dart';
+import 'package:coursehub/utils/theme_provider.dart';
 import '../../utils/error_handler.dart';
 import '../../widgets/loading_overlay.dart';
 import '../../services/firestore_service.dart';
 import 'post_comments_screen.dart';
 import '../../providers/forum_provider.dart';
-import '../../providers/auth_provider.dart';
+import '../../providers/auth_provider.dart' as app_auth;
 import '../messaging/messaging_screen.dart';
+import '../messaging/chat_screen.dart';
 
 class CommunityScreen extends StatefulWidget {
   @override
@@ -30,6 +33,12 @@ class _CommunityScreenState extends State<CommunityScreen> {
         _searchQuery = _searchController.text.toLowerCase();
       });
     });
+    
+    // Ensure forum provider refreshes when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final forumProvider = Provider.of<ForumProvider>(context, listen: false);
+      forumProvider.refresh();
+    });
   }
 
   @override
@@ -47,6 +56,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: white),
+          onPressed: () => Navigator.of(context).canPop() ? Navigator.pop(context) : null,
+        ),
         title: Text(
           'Community Forums',
           style: TextStyle(
@@ -56,6 +69,20 @@ class _CommunityScreenState extends State<CommunityScreen> {
         ),
         backgroundColor: primaryPink,
         elevation: 0,
+        actions: [
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, child) {
+              return IconButton(
+                onPressed: themeProvider.toggleTheme,
+                icon: Icon(
+                  themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                  color: white,
+                ),
+                tooltip: 'Toggle theme',
+              );
+            },
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(60),
           child: _buildSearchBar(),
@@ -244,9 +271,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
               PopupMenuButton(
                 icon: Icon(Icons.more_vert, color: mediumGrey),
                 itemBuilder: (context) => [
+                  PopupMenuItem(child: Text('Chat'), value: 'chat'),
                   PopupMenuItem(child: Text('Report'), value: 'report'),
                   PopupMenuItem(child: Text('Share'), value: 'share'),
                 ],
+                onSelected: (value) => _handlePostMenuAction(value, post),
               ),
             ],
           ),
@@ -439,6 +468,99 @@ class _CommunityScreenState extends State<CommunityScreen> {
     );
   }
 
+  void _handlePostMenuAction(String action, Map<String, dynamic> post) async {
+    switch (action) {
+      case 'chat':
+        await _startChatWithUser(post);
+        break;
+      case 'report':
+        // Handle report action
+        break;
+      case 'share':
+        _sharePost(post['id'] ?? '', post['title'] ?? '', post['content'] ?? '', post['author'] ?? '');
+        break;
+    }
+  }
+
+  Future<void> _startChatWithUser(Map<String, dynamic> post) async {
+    final authProvider = Provider.of<app_auth.AuthProvider>(context, listen: false);
+    final currentUser = authProvider.user;
+    
+    if (currentUser == null) {
+      ErrorHandler.showError(context, 'You must be logged in to start a chat');
+      return;
+    }
+
+    // Try to get userId, fallback to finding user by author name
+    String? postUserId = post['userId'] as String?;
+    final postAuthor = post['author'] as String? ?? 'Unknown User';
+    
+    // If no userId, try to find user by author name
+    if (postUserId == null || postUserId.isEmpty) {
+      try {
+        final usersSnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .where('displayName', isEqualTo: postAuthor)
+            .limit(1)
+            .get();
+        
+        if (usersSnapshot.docs.isNotEmpty) {
+          postUserId = usersSnapshot.docs.first.id;
+        }
+      } catch (e) {
+        // Ignore error, will show message below
+      }
+    }
+    
+    if (postUserId == null || postUserId.isEmpty) {
+      ErrorHandler.showError(context, 'Cannot start chat: User information not available');
+      return;
+    }
+
+    if (postUserId == currentUser.uid) {
+      ErrorHandler.showError(context, 'You cannot chat with yourself');
+      return;
+    }
+
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: CircularProgressIndicator(color: primaryPink),
+        ),
+      );
+
+      // Create or get conversation
+      final conversationId = await _firestoreService.getOrCreateConversation(
+        currentUser.uid,
+        postUserId,
+      );
+
+      // Close loading dialog
+      Navigator.pop(context);
+
+      // Navigate to chat screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ChatScreen(
+            conversationId: conversationId,
+            otherUserId: postUserId!,
+            otherUserName: postAuthor,
+          ),
+        ),
+      );
+    } catch (e) {
+      // Close loading dialog if still open
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+      ErrorHandler.showError(context, 'Failed to start chat: $e');
+    }
+  }
+
   void _showCreatePostDialog() {
     _titleController.clear();
     _contentController.clear();
@@ -478,7 +600,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
               if (_titleController.text.trim().isNotEmpty && 
                   _contentController.text.trim().isNotEmpty) {
                 final forumProvider = Provider.of<ForumProvider>(context, listen: false);
-                final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                final authProvider = Provider.of<app_auth.AuthProvider>(context, listen: false);
                 
                 try {
                   final author = authProvider.userEmail?.split('@')[0] ?? 

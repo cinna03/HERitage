@@ -11,6 +11,9 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
+  bool _postNotifications = true;
+  bool _chatNotifications = true;
+  bool _eventReminders = true;
   String _selectedLanguage = 'en';
   bool _autoPlayVideos = true;
 
@@ -22,11 +25,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _loadPreferences() async {
     final notifications = await PreferencesService.getNotificationsEnabled();
+    final postNotifications = await PreferencesService.getPostNotifications();
+    final chatNotifications = await PreferencesService.getChatNotifications();
+    final eventReminders = await PreferencesService.getEventReminders();
     final language = await PreferencesService.getLanguage();
     final autoPlay = await PreferencesService.getAutoPlayVideos();
     
     setState(() {
       _notificationsEnabled = notifications;
+      _postNotifications = postNotifications;
+      _chatNotifications = chatNotifications;
+      _eventReminders = eventReminders;
       _selectedLanguage = language;
       _autoPlayVideos = autoPlay;
     });
@@ -76,6 +85,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           SizedBox(height: 15),
           _buildSettingCard(
+            'Post Notifications',
+            'Get notified about new posts',
+            Switch(
+              value: _postNotifications,
+              onChanged: (value) async {
+                setState(() => _postNotifications = value);
+                await PreferencesService.setPostNotifications(value);
+              },
+              activeTrackColor: primaryPink,
+            ),
+          ),
+          SizedBox(height: 15),
+          _buildSettingCard(
+            'Chat Notifications',
+            'Get notified about new messages',
+            Switch(
+              value: _chatNotifications,
+              onChanged: (value) async {
+                setState(() => _chatNotifications = value);
+                await PreferencesService.setChatNotifications(value);
+              },
+              activeTrackColor: primaryPink,
+            ),
+          ),
+          SizedBox(height: 15),
+          _buildSettingCard(
+            'Event Reminders',
+            'Get reminded about upcoming events',
+            Switch(
+              value: _eventReminders,
+              onChanged: (value) async {
+                setState(() => _eventReminders = value);
+                await PreferencesService.setEventReminders(value);
+              },
+              activeTrackColor: primaryPink,
+            ),
+          ),
+          SizedBox(height: 15),
+          _buildSettingCard(
             'Language',
             'Select app language',
             DropdownButton<String>(
@@ -83,6 +131,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               items: [
                 DropdownMenuItem(value: 'en', child: Text('English')),
                 DropdownMenuItem(value: 'fr', child: Text('French')),
+                DropdownMenuItem(value: 'es', child: Text('Spanish')),
+                DropdownMenuItem(value: 'pt', child: Text('Portuguese')),
+                DropdownMenuItem(value: 'sw', child: Text('Swahili')),
               ],
               onChanged: (value) async {
                 if (value != null) {
@@ -111,14 +162,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildSettingCard(String title, String subtitle, Widget trailing) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Container(
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: lightPink.withValues(alpha: 0.3),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
             blurRadius: 10,
             offset: Offset(0, 5),
           ),
@@ -130,8 +184,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                Text(subtitle, style: TextStyle(fontSize: 14, color: mediumGrey)),
+                Text(
+                  title, 
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontSize: 16, 
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  subtitle, 
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontSize: 14, 
+                    color: mediumGrey,
+                  ),
+                ),
               ],
             ),
           ),
